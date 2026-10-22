@@ -18,6 +18,7 @@ import { EMAIL_QUEUE, type Email } from "@upzy/auth/email";
 import { schema, type Db } from "@upzy/db";
 import { enqueue, work } from "@upzy/queue";
 import { describeStack, type Stack } from "@upzy/security";
+import { compose, type TemplateProps } from "@upzy/transactional/templates";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { computeDigestStats, weekStartOf } from "../digest-stats";
@@ -501,47 +502,30 @@ export async function handleGroupSummary(
 const pct = (v: number | null) => (v === null ? "no data" : `${(v * 100).toFixed(2)}%`);
 
 /** The digest body. The numbers always come from `stats`; the narrative, when AI is available, is added on top. */
-export function renderDigest(
+/** What the digest says. The numbers always come from `stats`; the narrative, when AI is available, is added on top. */
+export function digestProps(
   stats: DigestStats,
   narrative: DigestNarrative | null,
   appUrl: string,
-): Email["text"] {
-  const lines: string[] = [];
-  lines.push(
-    `Weekly summary for ${stats.workspace}`,
-    `${stats.periodStart} to ${stats.periodEnd}`,
-    "",
-  );
-  if (narrative) {
-    lines.push(narrative.headline, "", narrative.summary, "");
-    if (narrative.highlights.length) lines.push(...narrative.highlights.map((h) => `- ${h}`), "");
-    if (narrative.actions.length)
-      lines.push("Worth doing:", ...narrative.actions.map((a) => `- ${a}`), "");
-  }
-  lines.push("Uptime");
-  lines.push(
-    ...(stats.monitors.length
-      ? stats.monitors.map(
-          (m) =>
-            `- ${m.name}: ${pct(m.uptime)}${m.avgMs !== null ? `, avg ${m.avgMs} ms` : ""} (${m.checks} checks)`,
-        )
-      : ["- No monitors yet"]),
-  );
-  lines.push(
-    "",
-    `Incidents: ${stats.incidents.opened} opened, ${stats.incidents.resolved} resolved, ${stats.incidents.stillOpen} still open, ${stats.incidents.totalDowntimeMinutes} min of downtime`,
-  );
-  lines.push(
-    `Security findings: ${stats.findings.new} new, ${stats.findings.resolved} resolved, ${stats.findings.open} open`,
-  );
-  if (stats.findings.topOpen.length)
-    lines.push(
-      "Top open findings:",
-      ...stats.findings.topOpen.map((f) => `- [${f.severity}] ${f.title} (${f.asset})`),
-    );
-  lines.push("", `Open the dashboard: ${appUrl}/monitors`);
-  return lines.join("\n");
+): TemplateProps["weeklyDigest"] {
+  return {
+    workspace: stats.workspace,
+    periodStart: stats.periodStart,
+    periodEnd: stats.periodEnd,
+    ...(narrative ? { narrative } : {}),
+    monitors: stats.monitors.map((m) => ({ ...m, uptime: pct(m.uptime) })),
+    incidents: stats.incidents,
+    findings: stats.findings,
+    dashboardUrl: `${appUrl}/monitors`,
+  };
 }
+
+/** The plain-text digest. */
+export const renderDigest = (
+  stats: DigestStats,
+  narrative: DigestNarrative | null,
+  appUrl: string,
+): Email["text"] => compose("weeklyDigest", "", digestProps(stats, narrative, appUrl)).text;
 
 export async function handleDigest(
   db: Db,
@@ -573,14 +557,12 @@ export async function handleDigest(
     console.warn(`[ai] digest narrative skipped: ${e.message}`);
   }
 
-  const text = renderDigest(stats, narrative, appUrl);
+  const props = digestProps(stats, narrative, appUrl);
   for (const r of recipients) {
-    await enqueue<Email>(
-      db,
-      EMAIL_QUEUE,
-      { to: r.email, subject: `Your weekly Upzy summary: ${ws.name}`, text },
-      { maxAttempts: 5, dedupeKey: `digest:${workspaceId}:${weekStart}:${r.email}` },
-    );
+    await enqueue<Email>(db, EMAIL_QUEUE, compose("weeklyDigest", r.email, props), {
+      maxAttempts: 5,
+      dedupeKey: `digest:${workspaceId}:${weekStart}:${r.email}`,
+    });
   }
   await db
     .update(digestRuns)

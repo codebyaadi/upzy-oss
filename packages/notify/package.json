@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@upzy/crypto": "workspace:*",
-    "@upzy/probes": "workspace:*"
+    "@upzy/probes": "workspace:*",
+    "@upzy/transactional": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "catalog:dev",

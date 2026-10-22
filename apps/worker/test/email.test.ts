@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
 import { EMAIL_QUEUE, emails } from "@upzy/auth/email";
+import { deliver } from "@upzy/notify";
 
-import { handleEmail, resendSender } from "../src/roles/notifier";
+import { handleEmail, resendSender, withHtml } from "../src/roles/notifier";
 
 describe("queued transactional email", () => {
   test("sends the queued message with its HTML version rendered from the template", async () => {
@@ -74,6 +75,32 @@ describe("queued transactional email", () => {
 
   test("the queue name is stable", () => {
     expect(EMAIL_QUEUE).toBe("email");
+  });
+});
+
+describe("email alert channels", () => {
+  test("an incident alert keeps its plain text and gains the branded HTML", async () => {
+    const sent: any[] = [];
+    await deliver(
+      { kind: "email", to: "ops@acme.test" },
+      {
+        event: "incident.opened",
+        incident: {
+          id: "1",
+          title: "API is down",
+          openedAt: "2026-10-20T10:00:00Z",
+          resolvedAt: null,
+        },
+        monitor: { id: "m", name: "API", target: "https://api.acme.test" },
+        url: "https://app/incidents/1",
+      },
+      { email: async (m) => void sent.push(await withHtml(m)) },
+    );
+    expect(sent[0].subject).toBe("[Down] API");
+    expect(sent[0].text).toBe("🔴 API is down\nhttps://api.acme.test\nhttps://app/incidents/1");
+    expect(sent[0].html).toContain("API is down");
+    expect(sent[0].html).toContain("https://app/incidents/1");
+    expect(sent[0].template).toBeUndefined();
   });
 });
 

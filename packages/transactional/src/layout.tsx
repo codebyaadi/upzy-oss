@@ -5,12 +5,16 @@ import {
   Head,
   Hr,
   Html,
+  Img,
   Link,
   Preview,
   Section,
   Text,
 } from "@react-email/components";
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
+
+/** Where the web app is served from: the logo is fetched from there (email clients can't show inline SVG). */
+export const EmailContext = createContext({ appUrl: "http://localhost:3001" });
 
 /** The brand, as in the app and the website (packages/ui globals.css). Email clients ignore CSS variables, so these are literals. */
 export const color = {
@@ -95,6 +99,41 @@ export const Callout = ({ children }: { children: ReactNode }) => (
   </Section>
 );
 
+/** The logo as on the website: the mark on a deep-teal tile, then the wordmark with its brand-colour full stop. */
+function Brand() {
+  const { appUrl } = useContext(EmailContext);
+  return (
+    <table role="presentation" cellPadding={0} cellSpacing={0} style={{ margin: "0 0 18px 4px" }}>
+      <tbody>
+        <tr>
+          <td style={{ paddingRight: "10px", verticalAlign: "middle" }}>
+            <Img
+              src={`${appUrl.replace(/\/$/, "")}/email/logo.png`}
+              width={36}
+              height={36}
+              alt="Upzy"
+              style={{ display: "block", borderRadius: "10px" }}
+            />
+          </td>
+          <td style={{ verticalAlign: "middle" }}>
+            <span
+              style={{
+                fontFamily: font,
+                fontSize: "22px",
+                fontWeight: 800,
+                letterSpacing: "-0.04em",
+                color: color.primary,
+              }}
+            >
+              Upzy<span style={{ color: color.brand }}>.</span>
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
 /** The shared frame: wordmark, white card on the app's pale background, footer. */
 export function Layout({
   preview,
@@ -121,18 +160,7 @@ export function Layout({
         style={{ backgroundColor: color.page, margin: 0, padding: "32px 12px", fontFamily: font }}
       >
         <Container style={{ maxWidth: "540px", margin: "0 auto" }}>
-          <Text
-            style={{
-              fontFamily: font,
-              fontSize: "20px",
-              fontWeight: 800,
-              letterSpacing: "-0.02em",
-              color: color.primary,
-              margin: "0 0 16px 4px",
-            }}
-          >
-            Upzy
-          </Text>
+          <Brand />
           <Section
             style={{
               backgroundColor: color.card,

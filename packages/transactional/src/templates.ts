@@ -36,6 +36,36 @@ export interface TemplateProps {
   };
   accountDeleted: { name: string };
   organizationDeleted: { name: string; organization: string; by: string };
+  /** An incident or security finding sent to an email alert channel. */
+  alert: {
+    subject: string;
+    emoji: string;
+    tone: "down" | "recovered" | "finding";
+    line1: string;
+    line2: string;
+    url: string;
+  };
+  weeklyDigest: {
+    workspace: string;
+    periodStart: string;
+    periodEnd: string;
+    narrative?: { headline: string; summary: string; highlights: string[]; actions: string[] };
+    /** `uptime` is already formatted ("99.95%" or "no data"). */
+    monitors: { name: string; uptime: string; avgMs: number | null; checks: number }[];
+    incidents: {
+      opened: number;
+      resolved: number;
+      stillOpen: number;
+      totalDowntimeMinutes: number;
+    };
+    findings: {
+      new: number;
+      resolved: number;
+      open: number;
+      topOpen: { title: string; severity: string; asset: string }[];
+    };
+    dashboardUrl: string;
+  };
 }
 
 export type TemplateName = keyof TemplateProps;
@@ -104,6 +134,49 @@ export const templates: { [N in TemplateName]: Template<TemplateProps[N]> } = {
     subject: (p) => `${p.organization} was deleted on Upzy`,
     text: (p) =>
       `Hi ${p.name},\n\n${p.by} deleted the organization ${p.organization} on Upzy. Its monitors, status pages, findings and history are gone, and you no longer have access to it.`,
+  },
+  alert: {
+    subject: (p) => p.subject,
+    text: (p) => `${p.emoji} ${p.line1}
+${p.line2}
+${p.url}`,
+  },
+  weeklyDigest: {
+    subject: (p) => `Your weekly Upzy summary: ${p.workspace}`,
+    text: (p) => {
+      const lines: string[] = [
+        `Weekly summary for ${p.workspace}`,
+        `${p.periodStart} to ${p.periodEnd}`,
+        "",
+      ];
+      const n = p.narrative;
+      if (n) {
+        lines.push(n.headline, "", n.summary, "");
+        if (n.highlights.length) lines.push(...n.highlights.map((h) => `- ${h}`), "");
+        if (n.actions.length) lines.push("Worth doing:", ...n.actions.map((a) => `- ${a}`), "");
+      }
+      lines.push("Uptime");
+      lines.push(
+        ...(p.monitors.length
+          ? p.monitors.map(
+              (m) =>
+                `- ${m.name}: ${m.uptime}${m.avgMs !== null ? `, avg ${m.avgMs} ms` : ""} (${m.checks} checks)`,
+            )
+          : ["- No monitors yet"]),
+      );
+      lines.push(
+        "",
+        `Incidents: ${p.incidents.opened} opened, ${p.incidents.resolved} resolved, ${p.incidents.stillOpen} still open, ${p.incidents.totalDowntimeMinutes} min of downtime`,
+        `Security findings: ${p.findings.new} new, ${p.findings.resolved} resolved, ${p.findings.open} open`,
+      );
+      if (p.findings.topOpen.length)
+        lines.push(
+          "Top open findings:",
+          ...p.findings.topOpen.map((f) => `- [${f.severity}] ${f.title} (${f.asset})`),
+        );
+      lines.push("", `Open the dashboard: ${p.dashboardUrl}`);
+      return lines.join("\n");
+    },
   },
 };
 

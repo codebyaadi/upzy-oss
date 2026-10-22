@@ -1,6 +1,6 @@
 # Email
 
-Upzy sends email for invitations, password resets, the weekly digest and email alerts. Messages are branded HTML with a plain-text fallback (the templates live in `packages/transactional`). The easiest way to send them is Resend: verify your domain at resend.com, create an API key and set two lines in `deploy/.env` on the server:
+Upzy sends email for invitations, password resets, the weekly digest and email alerts. Every message (account mail, alerts, the weekly summary) is branded HTML with a plain-text fallback; the templates live in `packages/transactional`, and the logo in them is loaded from your web app at `APP_URL/email/logo.png`. The easiest way to send them is Resend: verify your domain at resend.com, create an API key and set two lines in `deploy/.env` on the server:
 
 ```
 RESEND_API_KEY=re_...

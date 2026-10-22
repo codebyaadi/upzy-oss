@@ -1,5 +1,6 @@
 import { signWebhook } from "@upzy/crypto";
 import { safeFetch } from "@upzy/probes";
+import { compose, type TemplateProps } from "@upzy/transactional/templates";
 
 export type IncidentEventName = "incident.opened" | "incident.resolved";
 export type NotifyEventName = IncidentEventName | "finding.opened";
@@ -50,6 +51,8 @@ export interface EmailSender {
     text: string;
     html?: string;
     headers?: Record<string, string>;
+    /** A @upzy/transactional template to render as the HTML version (done by the worker's sender). */
+    template?: { name: string; props: unknown };
   }): Promise<void>;
 }
 
@@ -63,12 +66,32 @@ export const subjectFor = (n: Notification) =>
       ? `[Down] ${n.monitor.name}`
       : `[Recovered] ${n.monitor.name}`;
 
+/** What an email alert says, shared by the plain-text version and the HTML template. */
+function alertFor(n: Notification): Omit<TemplateProps["alert"], "subject"> {
+  if (n.event === "finding.opened")
+    return {
+      emoji: SEVERITY_EMOJI[n.finding.severity] ?? "⚠️",
+      tone: "finding",
+      line1: `${capitalize(n.finding.severity)} finding on ${n.asset.value}`,
+      line2: n.finding.title,
+      url: n.url,
+    };
+  return n.event === "incident.opened"
+    ? { emoji: "🔴", tone: "down", line1: n.incident.title, line2: n.monitor.target, url: n.url }
+    : {
+        emoji: "🟢",
+        tone: "recovered",
+        line1: `${n.monitor.name} has recovered`,
+        line2: n.monitor.target,
+        url: n.url,
+      };
+}
+
 export function textFor(n: Notification): string {
-  if (n.event === "finding.opened") {
-    return `${SEVERITY_EMOJI[n.finding.severity] ?? "⚠️"} ${capitalize(n.finding.severity)} finding on ${n.asset.value}\n${n.finding.title}\n${n.url}`;
-  }
-  const head = n.event === "incident.opened" ? n.incident.title : `${n.monitor.name} has recovered`;
-  return `${n.event === "incident.opened" ? "🔴" : "🟢"} ${head}\n${n.monitor.target}\n${n.url}`;
+  const a = alertFor(n);
+  return `${a.emoji} ${a.line1}
+${a.line2}
+${a.url}`;
 }
 
 function assertOk(status: number, what: string) {
@@ -117,7 +140,7 @@ export async function deliver(
     }
     case "email": {
       if (!deps.email) throw new Error("Email is not configured on this worker (SMTP_URL)");
-      await deps.email({ to: config.to, subject: subjectFor(n), text: textFor(n) });
+      await deps.email(compose("alert", config.to, { subject: subjectFor(n), ...alertFor(n) }));
       return;
     }
   }

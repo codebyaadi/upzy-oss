@@ -9,7 +9,7 @@ import {
   type Notification,
 } from "@upzy/notify";
 import { enqueue, work, type Job } from "@upzy/queue";
-import { renderHtml } from "@upzy/transactional";
+import { renderHtml, type TemplateName } from "@upzy/transactional";
 import { and, eq, isNull, or } from "drizzle-orm";
 import nodemailer from "nodemailer";
 
@@ -289,27 +289,34 @@ export async function handleDeliver(
   }
 }
 
+/**
+ * Turns a message that names a template into one carrying its HTML. Rendering happens here, so the request that queued
+ * it never loads the renderer. If rendering fails the plain-text body still goes out: a broken template must not stop
+ * a password reset or an outage alert.
+ */
+export async function withHtml<M extends { template?: { name: string; props: unknown } }>(m: M) {
+  const { template, ...message } = m;
+  if (!template) return message;
+  try {
+    return { ...message, html: await renderHtml(template.name as TemplateName, template.props) };
+  } catch (e) {
+    console.error("[email] couldn't render", template.name, e);
+    return message;
+  }
+}
+
 /** Sends a queued transactional email (invitations, password resets). Throws so the queue retries. */
 export async function handleEmail(email: EmailSender | undefined, payload: Email) {
   if (!email)
     throw new Error("Email is not configured on this worker (RESEND_API_KEY or SMTP_URL)");
-  const { template, ...message } = payload;
-  // The HTML version is rendered here, so the request that queued it never loads the renderer. If rendering fails the
-  // plain-text body still goes out: a broken template must not stop a password reset.
-  let html: string | undefined;
-  if (template) {
-    try {
-      html = await renderHtml(template.name, template.props);
-    } catch (e) {
-      console.error("[email] couldn't render", template.name, e);
-    }
-  }
-  await email({ ...message, ...(html ? { html } : {}) });
+  await email(await withHtml(payload));
   console.log(`[email] sent "${payload.subject}"`);
 }
 
 export async function runNotifier(db: Db, env: NotifierEnv, signal: AbortSignal) {
   const email = makeEmailSender(env);
+  // Email alert channels get the branded HTML too.
+  const alertEmail: EmailSender | undefined = email && (async (m) => email(await withHtml(m)));
   await Promise.all([
     work<Email>(db, EMAIL_QUEUE, (p) => handleEmail(email, p), { concurrency: 3, signal }),
     work<NotifyJob>(db, NOTIFY_QUEUE, (p) => fanOut(db, p).then(() => undefined), {
@@ -325,7 +332,7 @@ export async function runNotifier(db: Db, env: NotifierEnv, signal: AbortSignal)
     work<DeliverJob | TestDeliverJob>(
       db,
       DELIVER_QUEUE,
-      (p, job) => handleDeliver(db, env, email, p, job),
+      (p, job) => handleDeliver(db, env, alertEmail, p, job),
       { concurrency: 10, signal },
     ),
   ]);

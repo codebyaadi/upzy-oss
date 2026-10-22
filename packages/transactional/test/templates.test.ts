@@ -32,6 +32,34 @@ const sample: TemplateProps = {
     billingUrl: "https://app/settings/billing",
     unsubscribeUrl: "https://api/u?t=1",
   },
+  alert: {
+    subject: "[Down] API",
+    emoji: "🔴",
+    tone: "down",
+    line1: "API is down",
+    line2: "https://api.example.com",
+    url: "https://app/incidents/1",
+  },
+  weeklyDigest: {
+    workspace: "Prod",
+    periodStart: "2026-10-05",
+    periodEnd: "2026-10-11",
+    narrative: {
+      headline: "A quiet week",
+      summary: "Ada, all up.",
+      highlights: ["a"],
+      actions: ["do x"],
+    },
+    monitors: [{ name: "API", uptime: "99.95%", avgMs: 120, checks: 10 }],
+    incidents: { opened: 1, resolved: 1, stillOpen: 0, totalDowntimeMinutes: 5 },
+    findings: {
+      new: 1,
+      resolved: 0,
+      open: 1,
+      topOpen: [{ severity: "high", title: "HSTS", asset: "example.com" }],
+    },
+    dashboardUrl: "https://app/monitors",
+  },
   accountDeleted: { name: "Ada" },
   organizationDeleted: { name: "Ada", organization: "Acme", by: "Grace" },
 };
@@ -53,6 +81,8 @@ describe("every template", () => {
       expect(html.startsWith("<!DOCTYPE html")).toBe(true);
       expect(html).toContain("#0f3d3a"); // brand colour from the style guide
       expect(html).toContain("Upzy");
+      // The logo is fetched from the web app, so it has to point at the configured one.
+      expect(html).toContain("/email/logo.png");
 
       // Every URL in the text version is also a link in the HTML one.
       for (const [url] of mail.text.matchAll(/https:\/\/[^\s)]+/g))
@@ -91,6 +121,15 @@ describe("composing", () => {
     });
     expect(html).not.toContain("<script>alert(1)</script>");
     expect(html).toContain("&lt;script&gt;");
+  });
+
+  test("the logo comes from the configured app URL", async () => {
+    const html = await renderHtml(
+      "accountDeleted",
+      { name: "Ada" },
+      { appUrl: "https://app.example.com/" },
+    );
+    expect(html).toContain("https://app.example.com/email/logo.png");
   });
 
   test("an unknown template is refused rather than sending an empty email", async () => {
