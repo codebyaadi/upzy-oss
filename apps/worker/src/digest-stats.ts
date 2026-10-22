@@ -17,13 +17,16 @@ const addDays = (isoDate: string, days: number) =>
   new Date(Date.parse(`${isoDate}T00:00:00Z`) + days * 86_400_000);
 
 /** The previous full week (Mon..Sun) for the week that starts at `weekStart`. Pure SQL aggregates: the model never computes numbers. */
-export async function computeDigestStats(
+export const computeDigestStats = (db: Db, workspaceId: string, weekStart: string) =>
+  computePeriodStats(db, workspaceId, addDays(weekStart, -7), addDays(weekStart, 0));
+
+/** The same numbers for any period [from, to). */
+export async function computePeriodStats(
   db: Db,
   workspaceId: string,
-  weekStart: string,
+  from: Date,
+  to: Date,
 ): Promise<DigestStats> {
-  const to = addDays(weekStart, 0);
-  const from = addDays(weekStart, -7);
   const [ws] = await db
     .select({ name: workspaces.name })
     .from(workspaces)
@@ -83,7 +86,7 @@ export async function computeDigestStats(
   return {
     workspace: ws?.name ?? "Workspace",
     periodStart: from.toISOString().slice(0, 10),
-    periodEnd: addDays(weekStart, -1).toISOString().slice(0, 10),
+    periodEnd: new Date(to.getTime() - 86_400_000).toISOString().slice(0, 10),
     monitors: monitorRows.map((m) => {
       const a = agg.find((x) => x.monitorId === m.id);
       return {

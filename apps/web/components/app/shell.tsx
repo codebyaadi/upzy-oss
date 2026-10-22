@@ -6,6 +6,7 @@ import {
   Alert02Icon,
   AuditIcon,
   DashboardSquare01Icon,
+  File01Icon,
   Calendar03Icon,
   Globe02Icon,
   Menu01Icon,
@@ -61,6 +62,7 @@ const groups: { label: string; items: NavItem[] }[] = [
       { href: "/alerts", label: "Alerts", icon: Notification03Icon },
       { href: "/maintenance", label: "Maintenance", icon: Calendar03Icon },
       { href: "/status-pages", label: "Status pages", icon: Wifi01Icon },
+      { href: "/reports", label: "Client reports", icon: File01Icon, min: "admin" },
     ],
   },
   {

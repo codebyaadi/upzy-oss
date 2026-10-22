@@ -8,6 +8,7 @@ import { runDiscovery } from "./roles/discovery";
 import { parseLifecycle, runLifecycle } from "./roles/lifecycle";
 import { runNotifier } from "./roles/notifier";
 import { runProber } from "./roles/prober";
+import { parseReports, runReports } from "./roles/reports";
 import { parseRetention, runRetention } from "./roles/retention";
 import { runScanner } from "./roles/scanner";
 import { runScheduler } from "./roles/scheduler";
@@ -40,6 +41,8 @@ if (roles.has("scheduler")) {
   running.push(runRetention(db, controller.signal, parseRetention(process.env)));
   // Welcome, first-fix and trial-ending emails (LIFECYCLE_EMAILS=off disables them).
   running.push(runLifecycle(db, controller.signal, parseLifecycle(process.env)));
+  // Scheduled client reports (CLIENT_REPORTS=off disables them).
+  running.push(runReports(db, controller.signal, parseReports(process.env)));
 }
 if (roles.has("prober"))
   running.push(runProber(db, controller.signal, { encryptionKey: env.UPZY_ENCRYPTION_KEY }));

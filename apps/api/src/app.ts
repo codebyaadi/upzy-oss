@@ -24,6 +24,7 @@ import { onboardingModule } from "./modules/onboarding";
 import { overviewModule } from "./modules/overview";
 import { pingModule } from "./modules/ping";
 import { publicStatusModule } from "./modules/public-status";
+import { reportsModule } from "./modules/reports";
 import { statusPageModule, type StatusDns } from "./modules/status-page";
 import { toolsModule, type ToolsDeps } from "./modules/tools";
 import { workspaceModule } from "./modules/workspace";
@@ -131,6 +132,11 @@ export const createApp = ({
       .use(workspaceModule(db, authP))
       .use(overviewModule(db, authP))
       .use(accessModule(db, authP))
+      .use(
+        reportsModule(db, authP, billing, {
+          secret: authSecret ?? process.env.BETTER_AUTH_SECRET ?? "",
+        }),
+      )
       .use(monitorModule(db, authP, billing, { encryptionKey, apiOrigin }))
       .use(channelModule(db, authP, encryptionKey))
       .use(alertRuleModule(db, authP))

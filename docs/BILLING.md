@@ -15,6 +15,7 @@ Defined in `packages/billing/src/plans.ts`, used by the server to enforce limits
 | Status pages                         | 1     | 1       | 5     | 100    |
 | Custom domain on a status page       | no    | yes     | yes   | yes    |
 | Your client's logo on a status page  | no    | no      | no    | yes    |
+| Scheduled client reports             | no    | no      | no    | yes    |
 
 Team members are unlimited on every plan, and AI features run on the customer's own provider key, so neither is metered. Every new organization gets a **14-day Pro trial with no card**; the clock starts the first time its billing is looked at (so existing organizations get 14 days from when you switch billing on). After it, they are on Free.
 

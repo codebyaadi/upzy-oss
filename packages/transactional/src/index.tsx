@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 
 import AccountDeleted from "./emails/account-deleted";
 import Alert from "./emails/alert";
+import ClientReport from "./emails/client-report";
 import FixNudge from "./emails/fix-nudge";
 import Invitation from "./emails/invitation";
 import OrganizationDeleted from "./emails/organization-deleted";
@@ -30,6 +31,7 @@ const components: { [N in TemplateName]: ComponentType<TemplateProps[N]> } = {
   accountDeleted: AccountDeleted,
   organizationDeleted: OrganizationDeleted,
   alert: Alert,
+  clientReport: ClientReport,
   weeklyDigest: WeeklyDigest,
 };
 

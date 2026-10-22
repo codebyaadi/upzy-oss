@@ -204,6 +204,13 @@
       "when": 1792705827020,
       "tag": "0028_workspace_access",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792706699327,
+      "tag": "0029_client_reports",
+      "breakpoints": true
     }
   ]
 }

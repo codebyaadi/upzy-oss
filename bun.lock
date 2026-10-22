@@ -75,6 +75,7 @@
       "dependencies": {
         "@upzy/ai": "workspace:*",
         "@upzy/auth": "workspace:*",
+        "@upzy/billing": "workspace:*",
         "@upzy/crypto": "workspace:*",
         "@upzy/db": "workspace:*",
         "@upzy/notify": "workspace:*",

@@ -12,6 +12,7 @@ export function planFeatures(id: PlanId): string[] {
     `${n(l.assets)} ${l.assets === 1 ? "domain" : "domains"} with security scans`,
     `${id === "agency" ? "Many" : n(l.statusPages)} status ${l.statusPages === 1 ? "page" : "pages"}${l.customDomain ? ", on your own domain" : ""}`,
     ...(l.customLogo && id !== "unlimited" ? ["Your client's logo on status pages"] : []),
+    ...(l.clientReports && id !== "unlimited" ? ["Scheduled reports emailed to your clients"] : []),
     "Unlimited team members",
     "Health score and fix instructions",
     "AI help on your own provider key",

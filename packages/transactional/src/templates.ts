@@ -45,6 +45,33 @@ export interface TemplateProps {
     line2: string;
     url: string;
   };
+  /** The report an agency sends its client: plain numbers, no AI, no finding details. */
+  clientReport: {
+    workspace: string;
+    /** Who sends it (the agency), shown as "Prepared by". */
+    preparedBy: string;
+    frequency: "weekly" | "monthly";
+    /** "5 to 11 October 2026" or "October 2026". */
+    periodLabel: string;
+    /** Weighted across every check in the period, already formatted ("99.95%"), or null with no data. */
+    uptime: string | null;
+    monitors: { name: string; uptime: string; avgMs: number | null; checks: number }[];
+    incidents: {
+      opened: number;
+      resolved: number;
+      stillOpen: number;
+      totalDowntimeMinutes: number;
+    };
+    security: {
+      grade: string | null;
+      newFindings: number;
+      resolvedFindings: number;
+      openFindings: number;
+    };
+    /** Their public status page, when one is published. */
+    statusPageUrl: string | null;
+    unsubscribeUrl: string;
+  };
   weeklyDigest: {
     workspace: string;
     periodStart: string;
@@ -140,6 +167,37 @@ export const templates: { [N in TemplateName]: Template<TemplateProps[N]> } = {
     text: (p) => `${p.emoji} ${p.line1}
 ${p.line2}
 ${p.url}`,
+  },
+  clientReport: {
+    subject: (p) =>
+      `${p.workspace}: ${p.frequency === "weekly" ? "weekly" : "monthly"} report, ${p.periodLabel}`,
+    text: (p) => {
+      const lines: string[] = [
+        `${p.workspace}: ${p.frequency} report`,
+        p.periodLabel,
+        `Prepared by ${p.preparedBy}`,
+        "",
+        `Uptime: ${p.uptime ?? "no data yet"}`,
+        ...(p.monitors.length
+          ? p.monitors.map(
+              (m) =>
+                `- ${m.name}: ${m.uptime}${m.avgMs !== null ? `, average response ${m.avgMs} ms` : ""}`,
+            )
+          : ["- No monitors yet"]),
+        "",
+        `Incidents: ${p.incidents.opened} opened, ${p.incidents.resolved} resolved, ${p.incidents.stillOpen} still open, ${p.incidents.totalDowntimeMinutes} min of downtime`,
+        `Security: grade ${p.security.grade ?? "not scanned yet"}; ${p.security.resolvedFindings} issue(s) fixed, ${p.security.newFindings} new, ${p.security.openFindings} open`,
+      ];
+      if (p.statusPageUrl) lines.push("", `Live status: ${p.statusPageUrl}`);
+      lines.push(
+        "",
+        "--",
+        `You get this report because ${p.preparedBy} set it up for ${p.workspace}.`,
+        `Unsubscribe: ${p.unsubscribeUrl}`,
+      );
+      return lines.join("\n");
+    },
+    unsubscribe: (p) => p.unsubscribeUrl,
   },
   weeklyDigest: {
     subject: (p) => `Your weekly Upzy summary: ${p.workspace}`,

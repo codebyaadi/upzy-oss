@@ -60,6 +60,18 @@ const sample: TemplateProps = {
     },
     dashboardUrl: "https://app/monitors",
   },
+  clientReport: {
+    workspace: "Acme",
+    preparedBy: "Pixel and Co",
+    frequency: "monthly",
+    periodLabel: "October 2026",
+    uptime: "99.94%",
+    monitors: [{ name: "Website", uptime: "99.98%", avgMs: 180, checks: 43200 }],
+    incidents: { opened: 2, resolved: 2, stillOpen: 0, totalDowntimeMinutes: 26 },
+    security: { grade: "A", newFindings: 1, resolvedFindings: 3, openFindings: 1 },
+    statusPageUrl: "https://status.acme.test",
+    unsubscribeUrl: "https://api/reports/unsubscribe?w=1",
+  },
   accountDeleted: { name: "Ada" },
   organizationDeleted: { name: "Ada", organization: "Acme", by: "Grace" },
 };
@@ -93,7 +105,13 @@ describe("every template", () => {
 
 describe("composing", () => {
   test("lifecycle and status emails carry a List-Unsubscribe header, account mail does not", () => {
-    for (const name of ["welcome", "fixNudge", "trialEnding", "statusNotice"] as const) {
+    for (const name of [
+      "welcome",
+      "fixNudge",
+      "trialEnding",
+      "statusNotice",
+      "clientReport",
+    ] as const) {
       const m = compose(name, "a@b.co", sample[name] as never);
       expect(m.headers?.["List-Unsubscribe"]).toMatch(/^<https:\/\/.+>$/);
     }

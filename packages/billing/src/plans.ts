@@ -12,6 +12,8 @@ export interface Limits {
   customDomain: boolean;
   /** The customer's own logo on status pages (Upzy's credit always stays). */
   customLogo: boolean;
+  /** Scheduled uptime and security reports emailed to a client. */
+  clientReports: boolean;
 }
 
 export interface Plan {
@@ -40,6 +42,7 @@ export const PLANS: Record<PlanId, Plan> = {
       statusPages: 1,
       customDomain: false,
       customLogo: false,
+      clientReports: false,
     },
   },
   starter: {
@@ -54,6 +57,7 @@ export const PLANS: Record<PlanId, Plan> = {
       statusPages: 1,
       customDomain: true,
       customLogo: false,
+      clientReports: false,
     },
   },
   pro: {
@@ -68,6 +72,7 @@ export const PLANS: Record<PlanId, Plan> = {
       statusPages: 5,
       customDomain: true,
       customLogo: false,
+      clientReports: false,
     },
   },
   agency: {
@@ -82,6 +87,7 @@ export const PLANS: Record<PlanId, Plan> = {
       statusPages: 100,
       customDomain: true,
       customLogo: true,
+      clientReports: true,
     },
   },
   // Not for sale: what everyone gets while billing is switched off (self-hosting, early access).
@@ -97,6 +103,7 @@ export const PLANS: Record<PlanId, Plan> = {
       statusPages: Infinity,
       customDomain: true,
       customLogo: true,
+      clientReports: true,
     },
   },
 };
@@ -126,3 +133,6 @@ export const customDomainMessage = (plan: PlanId) =>
 
 export const customLogoMessage = (plan: PlanId) =>
   `A custom logo on status pages isn't included in the ${PLANS[plan].name} plan. Upgrade to Agency under Settings → Billing.`;
+
+export const clientReportsMessage = (plan: PlanId) =>
+  `Scheduled client reports aren't included in the ${PLANS[plan].name} plan. Upgrade to Agency under Settings → Billing.`;

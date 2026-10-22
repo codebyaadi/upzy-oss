@@ -18,3 +18,29 @@ export function validUnsubscribeToken(secret: string, userId: string, token: str
 /** `apiUrl` is where the API is reached from outside (BETTER_AUTH_URL). */
 export const unsubscribeUrl = (apiUrl: string, secret: string, userId: string) =>
   `${apiUrl.replace(/\/$/, "")}/lifecycle/unsubscribe?u=${encodeURIComponent(userId)}&t=${unsubscribeToken(secret, userId)}`;
+
+/** The same idea for client reports: one link per (workspace, address), so one recipient can opt out alone. */
+const reportKey = (workspaceId: string, email: string) =>
+  `report:${workspaceId}:${email.trim().toLowerCase()}`;
+export const reportUnsubscribeToken = (secret: string, workspaceId: string, email: string) =>
+  createHmac("sha256", secret).update(reportKey(workspaceId, email)).digest("hex");
+
+export function validReportUnsubscribeToken(
+  secret: string,
+  workspaceId: string,
+  email: string,
+  token: string,
+): boolean {
+  if (!secret || !workspaceId || !email || !token) return false;
+  const expected = Buffer.from(reportUnsubscribeToken(secret, workspaceId, email));
+  const given = Buffer.from(token);
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
+
+export const reportUnsubscribeUrl = (
+  apiUrl: string,
+  secret: string,
+  workspaceId: string,
+  email: string,
+) =>
+  `${apiUrl.replace(/\/$/, "")}/reports/unsubscribe?w=${encodeURIComponent(workspaceId)}&e=${encodeURIComponent(email.trim().toLowerCase())}&t=${reportUnsubscribeToken(secret, workspaceId, email)}`;

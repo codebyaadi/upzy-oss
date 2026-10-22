@@ -149,7 +149,7 @@ Billing is off by default. With no payment keys set, nothing is limited, which i
 - **Account and organization deletion are self-service** (Account page in the user menu). An owner deletes an organization by typing its name; a paid subscription is cancelled first. Deleting an account removes the organizations you were alone in, and is refused while you are the only owner of one with other people in it.
 - **Lifecycle emails** (welcome, a nudge to fix your first finding, a heads-up before a trial ends) go out through the same SMTP settings. Each has a one-click unsubscribe, and `LIFECYCLE_EMAILS=off` stops them.
 
-- **For agencies:** the **All workspaces** page shows every client's monitors, open incidents, critical findings and security grade on one screen, the Agency plan can put a client's logo on its status page, and any viewer or member can be [limited to some workspaces](docs/ACCESS.md) so a client sees only their own.
+- **For agencies:** the **All workspaces** page shows every client's monitors, open incidents, critical findings and security grade on one screen, the Agency plan can put a client's logo on its status page, and any viewer or member can be [limited to some workspaces](docs/ACCESS.md) so a client sees only their own, and [scheduled client reports](docs/REPORTS.md) email each client a plain uptime and security summary.
 - **Free checkers** at `/tools` (security headers, SSL certificate, SPF and DMARC) need no account. They run the same checks as the scanner, are limited to 10 a minute per address, and cache each site for ten minutes. Only public sites can be checked.
 
 ## Security
