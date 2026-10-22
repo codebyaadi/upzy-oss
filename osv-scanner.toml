@@ -32,3 +32,13 @@ ecosystem = "npm"
 ignore = true
 effectiveUntil = 2027-01-31T00:00:00Z
 reason = "Bundled inside the dev-only email previewer's Next.js 16.1.7; our own build uses postcss 8.5."
+
+# The react-email CLI (dev only, `bun run dev` in packages/transactional) brings its own Next.js 16.3.3 through
+# @react-email/ui. Same reasoning as above: a local template previewer, never part of the server or web images.
+[[PackageOverrides]]
+name = "next"
+version = "16.3.3"
+ecosystem = "npm"
+ignore = true
+effectiveUntil = 2027-01-31T00:00:00Z
+reason = "Dev-only email previewer (react-email's @react-email/ui pins it); not shipped or run in production. Our own Next.js is 16.4.2."
