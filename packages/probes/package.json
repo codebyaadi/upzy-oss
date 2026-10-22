@@ -1,0 +1,24 @@
+{
+  "name": "@upzy/probes",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./egress": "./src/egress.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "check-types": "tsc --noEmit",
+    "lint": "oxlint"
+  },
+  "dependencies": {
+    "@upzy/db": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:dev",
+    "@types/node": "catalog:dev",
+    "@upzy/typescript-config": "workspace:*",
+    "oxlint": "catalog:dev",
+    "typescript": "catalog:dev"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@upzy/billing",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "check-types": "tsc --noEmit",
+    "lint": "oxlint"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:dev",
+    "@types/node": "catalog:dev",
+    "@upzy/typescript-config": "workspace:*",
+    "oxlint": "catalog:dev",
+    "typescript": "catalog:dev"
+  }
+}

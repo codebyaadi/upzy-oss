@@ -1,0 +1,16 @@
+# One image for the API, the worker and the migration job: they share the same workspace packages.
+# Build from the repo root:  docker build -f docker/Dockerfile.server -t upzy-server .
+FROM oven/bun:1.4-slim AS deps
+WORKDIR /repo
+COPY . .
+# Only what the server apps need (not Next.js, Tailwind or the UI kit).
+RUN bun install --frozen-lockfile --production --filter api --filter worker --filter @upzy/db
+
+FROM oven/bun:1.4-slim
+WORKDIR /repo
+ENV NODE_ENV=production
+COPY --from=deps /repo /repo
+# Run as the unprivileged user the base image provides.
+USER bun
+# Default: the API. The worker and migrations override the command in compose.
+CMD ["bun", "apps/api/src/index.ts"]

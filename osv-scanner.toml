@@ -1,0 +1,34 @@
+# Known advisories we accept, each with the reason and a date to look again. Everything else fails the Security workflow.
+
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2027-01-31
+reason = "braces (ReDoS) is only used by build-time glob tooling that reads our own repo; no fixed release exists yet."
+
+[[IgnoredVulns]]
+id = "GHSA-67mh-4wv8-2f99"
+ignoreUntil = 2027-01-31
+reason = "esbuild's dev-server issue; esbuild 0.18 is pulled in by drizzle-kit, which only runs on a developer's machine and never serves requests."
+
+[[IgnoredVulns]]
+id = "GHSA-g7r4-m6w7-qqqr"
+ignoreUntil = 2027-01-31
+reason = "esbuild 0.27 is a build-time dependency; the advisory needs its dev server, which we do not run. Low severity."
+
+# The email template previewer (react-email, dev only) pins its own Next.js 16.1.7. It runs on a developer's machine
+# to preview templates and is never part of the server or web images. Our real Next.js is 16.4.2.
+[[PackageOverrides]]
+name = "next"
+version = "16.1.7"
+ecosystem = "npm"
+ignore = true
+effectiveUntil = 2027-01-31T00:00:00Z
+reason = "Dev-only email previewer (@react-email/preview-server pins it); not shipped or run in production."
+
+[[PackageOverrides]]
+name = "postcss"
+version = "8.4.31"
+ecosystem = "npm"
+ignore = true
+effectiveUntil = 2027-01-31T00:00:00Z
+reason = "Bundled inside the dev-only email previewer's Next.js 16.1.7; our own build uses postcss 8.5."

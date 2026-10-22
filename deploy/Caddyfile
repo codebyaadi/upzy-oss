@@ -1,0 +1,39 @@
+{
+	email {$ACME_EMAIL}
+
+	# Certificates for customers' own status-page domains are requested on the first visit, but only for names the API
+	# confirms are a verified, published custom domain. Without this check anyone could point a domain at the server
+	# and make it ask Let's Encrypt for certificates.
+	on_demand_tls {
+		ask http://api:3000/internal/tls-check
+	}
+}
+
+# The web app
+{$DOMAIN_APP} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy web:3001
+}
+
+# The API (session cookies are shared with the app through COOKIE_DOMAIN)
+{$DOMAIN_API} {
+	encode zstd gzip
+	header -Server
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy api:3000
+}
+
+# Custom domains for status pages (status.example.com). The web app shows the right page for the Host it receives.
+https:// {
+	tls {
+		on_demand
+	}
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy web:3001
+}
+
+http:// {
+	redir https://{host}{uri} permanent
+}

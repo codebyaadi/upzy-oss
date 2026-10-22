@@ -1,0 +1,194 @@
+# Production stack for one VPS: Caddy (TLS) -> web + api, a worker, Postgres, nightly backups.
+# Usage (on the server, in this directory, with a filled-in .env next to this file): see docs/DEPLOYMENT.md
+#
+#   docker compose pull && docker compose up -d
+name: upzy
+
+x-server: &server
+  image: ghcr.io/${UPZY_IMAGE_REPO}-server:${IMAGE_TAG:-latest}
+  restart: unless-stopped
+  init: true
+  environment: &server-env
+    NODE_ENV: production
+    DATABASE_URL: postgres://upzy:${POSTGRES_PASSWORD}@postgres:5432/upzy
+    BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+    BETTER_AUTH_URL: https://${DOMAIN_API}
+    WEB_ORIGIN: https://${DOMAIN_APP}
+    APP_URL: https://${DOMAIN_APP}
+    COOKIE_DOMAIN: ${COOKIE_DOMAIN}
+    UPZY_ENCRYPTION_KEY: ${UPZY_ENCRYPTION_KEY}
+    # Caddy overwrites X-Forwarded-For, so the API may trust it for rate limits and the audit log.
+    TRUST_PROXY: "true"
+    SMTP_URL: ${SMTP_URL:-}
+    # Billing (Dodo Payments). Leave the key and secret empty to run without plans or limits.
+    DODO_API_KEY: ${DODO_API_KEY:-}
+    DODO_WEBHOOK_SECRET: ${DODO_WEBHOOK_SECRET:-}
+    DODO_MODE: ${DODO_MODE:-test}
+    DODO_PRODUCT_STARTER_MONTHLY: ${DODO_PRODUCT_STARTER_MONTHLY:-}
+    DODO_PRODUCT_STARTER_YEARLY: ${DODO_PRODUCT_STARTER_YEARLY:-}
+    DODO_PRODUCT_PRO_MONTHLY: ${DODO_PRODUCT_PRO_MONTHLY:-}
+    DODO_PRODUCT_PRO_YEARLY: ${DODO_PRODUCT_PRO_YEARLY:-}
+    DODO_PRODUCT_AGENCY_MONTHLY: ${DODO_PRODUCT_AGENCY_MONTHLY:-}
+    DODO_PRODUCT_AGENCY_YEARLY: ${DODO_PRODUCT_AGENCY_YEARLY:-}
+    MAIL_FROM: ${MAIL_FROM:-Upzy <alerts@localhost>}
+    # invite = only the first account (or allow-listed emails/domains) and people holding an invitation can sign up.
+    SIGNUP_MODE: ${SIGNUP_MODE:-invite}
+    SIGNUP_ALLOWED_EMAILS: ${SIGNUP_ALLOWED_EMAILS:-}
+    SIGNUP_ALLOWED_DOMAINS: ${SIGNUP_ALLOWED_DOMAINS:-}
+    GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+    GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+    NVD_API_KEY: ${NVD_API_KEY:-}
+    AI_RPM_LIMIT: ${AI_RPM_LIMIT:-60}
+    AI_ORG_DAILY_TOKEN_BUDGET: ${AI_ORG_DAILY_TOKEN_BUDGET:-200000}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: upzy
+      POSTGRES_USER: upzy
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U upzy -d upzy"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [db]
+
+  # Applies SQL migrations, then exits. api and worker wait for it.
+  migrate:
+    <<: *server
+    restart: "no"
+    command: ["bun", "packages/db/src/migrate.ts"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [db]
+
+  api:
+    <<: *server
+    environment:
+      <<: *server-env
+      PORT: "3000"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "const r = await fetch('http://127.0.0.1:3000/health'); process.exit(r.ok ? 0 : 1)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [db, edge]
+
+  # Runs the scheduler, prober, notifier, scanner and AI agent. No ports: it only talks to Postgres and out to the
+  # internet (probes, scans, email, your AI provider).
+  worker:
+    <<: *server
+    command: ["bun", "apps/worker/src/index.ts"]
+    environment:
+      <<: *server-env
+      WORKER_ROLES: ${WORKER_ROLES:-scheduler,prober,notifier,scanner,agent,correlator}
+      WORKER_REGION: ${WORKER_REGION:-primary}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    networks: [db, edge]
+
+  web:
+    image: ghcr.io/${UPZY_IMAGE_REPO}-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    init: true
+    environment:
+      # Shown on the legal pages (read at request time, so no rebuild is needed).
+      LEGAL_ENTITY: ${LEGAL_ENTITY:-}
+      CONTACT_EMAIL: ${CONTACT_EMAIL:-}
+      LEGAL_JURISDICTION: ${LEGAL_JURISDICTION:-}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/').then(r => process.exit(r.status < 500 ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [edge]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL}
+      DOMAIN_APP: ${DOMAIN_APP}
+      DOMAIN_API: ${DOMAIN_API}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [api, web]
+    networks: [edge]
+
+  # A compressed dump every night, the last 14 kept in ./backups. Copy them off the server too (see the deploy guide).
+  backup:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          sleep 86400
+          pg_dump -h postgres -U upzy -d upzy | gzip > /backups/upzy-$$(date +%F).sql.gz && echo "backup ok"
+          find /backups -name 'upzy-*.sql.gz' -mtime +14 -delete
+        done
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [db]
+
+  # Optional (docker compose --profile aws up -d): copies the dumps to S3 every 6 hours using the instance's IAM role,
+  # so no AWS keys are stored on the server. Needs BACKUP_S3_URI, e.g. s3://my-upzy-backups/db
+  offsite:
+    profiles: ["aws"]
+    image: amazon/aws-cli:latest
+    restart: unless-stopped
+    environment:
+      BACKUP_S3_URI: ${BACKUP_S3_URI:-}
+      AWS_REGION: ${AWS_REGION:-ap-south-1}
+    volumes:
+      - ./backups:/backups:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          aws s3 sync /backups "$$BACKUP_S3_URI" --only-show-errors && echo "offsite sync ok"
+          sleep 21600
+        done
+    networks: [edge]
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  # No internet access from here: only Postgres lives on it alone.
+  db:
+    internal: true
+  edge: {}
