@@ -32,6 +32,9 @@ const nextConfig: NextConfig = {
     ? { output: "standalone" as const, outputFileTracingRoot: path.resolve(process.cwd(), "../..") }
     : {}),
 
+  // The link-preview image reads its font files at request time; make sure the standalone build ships them.
+  outputFileTracingIncludes: { "/opengraph-image": ["./app/_og-fonts/**/*"] },
+
   // Don't advertise the framework.
   poweredByHeader: false,
 
