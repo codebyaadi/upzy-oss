@@ -125,7 +125,11 @@ export const monitorChecks = pgTable(
     ttfbMs: integer("ttfb_ms"),
     tlsDaysLeft: integer("tls_days_left"),
   },
-  (t) => [index("monitor_checks_monitor_id_created_at_idx").on(t.monitorId, t.createdAt.desc())],
+  (t) => [
+    index("monitor_checks_monitor_id_created_at_idx").on(t.monitorId, t.createdAt.desc()),
+    // Lets the retention job find old rows without scanning the whole table.
+    index("monitor_checks_created_at_idx").on(t.createdAt),
+  ],
 );
 
 export type StatusNoticeKind = "info" | "maintenance" | "incident";

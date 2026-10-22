@@ -145,7 +145,7 @@ Billing is off by default. With no payment keys set, nothing is limited, which i
 - **CVE matching is version-based.** Distributions backport fixes without changing versions, so findings say to confirm against your vendor's advisory.
 - **Certificate-transparency sources are flaky.** crt.sh often returns 502; discovery falls back to certspotter, which is less complete. A full outage retries in an hour.
 - The first scan of a site with several detected components takes tens of seconds because NVD is rate limited. Results are cached for 24 hours.
-- There is no self-service account or organization deletion yet, and monitoring results are kept until an organization is deleted.
+- Old data is cleaned up automatically: monitor checks are kept for 90 days by default (`CHECK_RETENTION_DAYS`, minimum 35 or `off`), finished background jobs for 14. Incidents and findings are kept. There is no self-service account or organization deletion yet.
 
 ## Security
 

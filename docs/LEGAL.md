@@ -32,6 +32,7 @@ The pages describe what the software really does, and must be kept true when it 
 
 - AI is off by default and runs only on the customer's own key; secrets are redacted before sending.
 - Passwords are hashed, channel secrets and provider keys are encrypted with AES-256-GCM.
+- Monitor check history is deleted after 90 days (`CHECK_RETENTION_DAYS`); keep the Privacy Policy line in step if you change it.
 - Backups expire after 30 days; status page subscribers who never confirm are removed after 7 days.
 - No analytics or advertising cookies; one session cookie, a sidebar preference and local storage for the selected workspace and theme.
 - Scans are passive: no logins, no guessing, no port scans, no exploitation. If active checks are ever added, update Acceptable Use, UpzyBot and the Terms first.

@@ -1,0 +1,1 @@
+CREATE INDEX "monitor_checks_created_at_idx" ON "monitor_checks" USING btree ("created_at");

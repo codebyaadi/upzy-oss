@@ -7,6 +7,7 @@ import { runCorrelator } from "./roles/correlator";
 import { runDiscovery } from "./roles/discovery";
 import { runNotifier } from "./roles/notifier";
 import { runProber } from "./roles/prober";
+import { parseRetention, runRetention } from "./roles/retention";
 import { runScanner } from "./roles/scanner";
 import { runScheduler } from "./roles/scheduler";
 
@@ -30,7 +31,12 @@ const controller = new AbortController();
 for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => controller.abort());
 
 const running: Promise<void>[] = [];
-if (roles.has("scheduler")) running.push(runScheduler(db, controller.signal));
+if (roles.has("scheduler")) {
+  running.push(runScheduler(db, controller.signal));
+  // Housekeeping rides along with the scheduler, which every deployment runs: old checks and finished jobs are
+  // deleted so the database does not grow without bound (CHECK_RETENTION_DAYS, default 90).
+  running.push(runRetention(db, controller.signal, parseRetention(process.env)));
+}
 if (roles.has("prober"))
   running.push(runProber(db, controller.signal, { encryptionKey: env.UPZY_ENCRYPTION_KEY }));
 if (roles.has("scanner")) {

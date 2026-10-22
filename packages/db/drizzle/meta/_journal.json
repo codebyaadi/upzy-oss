@@ -169,6 +169,13 @@
       "when": 1792219694251,
       "tag": "0023_rich_post",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792700597868,
+      "tag": "0024_monitor_checks_created_at",
+      "breakpoints": true
     }
   ]
 }

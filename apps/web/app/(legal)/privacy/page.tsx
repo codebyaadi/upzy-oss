@@ -144,6 +144,10 @@ export default function Privacy() {
             delete it.
           </li>
           <li>
+            Monitoring history (the result of each individual check): 90 days. Incidents and
+            security findings are part of your account data and are kept as described above.
+          </li>
+          <li>
             When you ask us to delete your account or organization, we delete it from the live
             service within 30 days. Encrypted backups are replaced on a 30-day cycle, so copies
             disappear from them within about 30 further days.
