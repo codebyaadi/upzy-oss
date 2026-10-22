@@ -55,19 +55,6 @@ Upzy puts both in one place and keeps the output readable:
   </tr>
 </table>
 
-## See it
-
-<table>
-  <tr>
-    <td width="50%"><img src="docs/images/monitors.png" alt="Monitors list with uptime and response time" /><br /><sub><b>Monitors.</b> Everything you watch, with 24-hour uptime and latency.</sub></td>
-    <td width="50%"><img src="docs/images/incident.png" alt="An open incident with timeline and latest checks" /><br /><sub><b>Incidents.</b> One outage, one incident, with a timeline and customer updates.</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/images/health.png" alt="Health score with the fix for the detected stack" /><br /><sub><b>Health score and fixes.</b> A grade per site, and the exact snippet for your stack.</sub></td>
-    <td width="50%"><img src="docs/images/status-page.png" alt="A public status page with 90-day uptime" /><br /><sub><b>Status pages.</b> What your customers see, on your own domain.</sub></td>
-  </tr>
-</table>
-
 ## Built with care
 
 - **Targets are public only.** Monitors and scans refuse loopback, private, link-local and metadata addresses. The address is resolved and pinned at connect time, so DNS rebinding can't swap it afterwards.
