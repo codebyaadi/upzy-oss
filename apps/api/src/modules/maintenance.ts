@@ -34,10 +34,10 @@ export const maintenanceModule = (
   authP: AuthPlugin,
   now: () => Date = () => new Date(),
 ) => {
-  const owned = (orgId: string, id: string) =>
+  const owned = (orgId: string, userId: string, id: string) =>
     and(
       eq(maintenanceWindows.id, id),
-      inArray(maintenanceWindows.workspaceId, orgWorkspaceIds(db, orgId)),
+      inArray(maintenanceWindows.workspaceId, orgWorkspaceIds(db, orgId, userId)),
     );
 
   const present = (row: Row, monitorIds: string[]) => ({
@@ -77,14 +77,14 @@ export const maintenanceModule = (
       .use(authP)
       .get(
         "/",
-        async ({ orgId, query }) => {
+        async ({ user, orgId, query }) => {
           const cutoff = new Date(now().getTime() - query.pastDays * 86_400_000);
           const rows = await db
             .select()
             .from(maintenanceWindows)
             .where(
               and(
-                inArray(maintenanceWindows.workspaceId, orgWorkspaceIds(db, orgId)),
+                inArray(maintenanceWindows.workspaceId, orgWorkspaceIds(db, orgId, user.id)),
                 query.workspaceId
                   ? eq(maintenanceWindows.workspaceId, query.workspaceId)
                   : undefined,
@@ -109,8 +109,8 @@ export const maintenanceModule = (
       )
       .post(
         "/",
-        async ({ body, orgId, set }) => {
-          await requireWorkspace(db, orgId, body.workspaceId);
+        async ({ user, body, orgId, set }) => {
+          await requireWorkspace(db, orgId, body.workspaceId, user.id);
           const startsAt = new Date(body.startsAt);
           const endsAt = new Date(body.endsAt);
           const monitorIds = body.allMonitors ? [] : [...new Set(body.monitorIds)];
@@ -143,8 +143,11 @@ export const maintenanceModule = (
       )
       .patch(
         "/:id",
-        async ({ params, body, orgId }) => {
-          const [row] = await db.select().from(maintenanceWindows).where(owned(orgId, params.id));
+        async ({ user, params, body, orgId }) => {
+          const [row] = await db
+            .select()
+            .from(maintenanceWindows)
+            .where(owned(orgId, user.id, params.id));
           if (!row) throw new HttpError(404, "Maintenance window not found");
           if (maintenancePhase(row, now()) === "past")
             throw new HttpError(409, "This window is over. Schedule a new one instead.");
@@ -197,8 +200,11 @@ export const maintenanceModule = (
       // open their incident on the next failed check.
       .post(
         "/:id/end",
-        async ({ params, orgId }) => {
-          const [row] = await db.select().from(maintenanceWindows).where(owned(orgId, params.id));
+        async ({ user, params, orgId }) => {
+          const [row] = await db
+            .select()
+            .from(maintenanceWindows)
+            .where(owned(orgId, user.id, params.id));
           if (!row) throw new HttpError(404, "Maintenance window not found");
           const t = now();
           if (maintenancePhase(row, t) !== "active")
@@ -215,8 +221,11 @@ export const maintenanceModule = (
       )
       .delete(
         "/:id",
-        async ({ params, orgId, set }) => {
-          const [row] = await db.select().from(maintenanceWindows).where(owned(orgId, params.id));
+        async ({ user, params, orgId, set }) => {
+          const [row] = await db
+            .select()
+            .from(maintenanceWindows)
+            .where(owned(orgId, user.id, params.id));
           if (!row) throw new HttpError(404, "Maintenance window not found");
           await db.delete(maintenanceWindows).where(eq(maintenanceWindows.id, row.id));
           forgetAllStatusPages();

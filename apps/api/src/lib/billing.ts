@@ -18,7 +18,7 @@ import { schema, type Db } from "@upzy/db";
 import { count, eq, inArray } from "drizzle-orm";
 
 import { HttpError } from "../plugins/errors";
-import { orgWorkspaceIds } from "./scope";
+import { allOrgWorkspaceIds } from "./scope";
 
 const { subscriptions, workspaces, monitors, assets, statusPages } = schema;
 
@@ -70,7 +70,8 @@ export function createBilling(deps: BillingDeps = { config: loadBillingConfig(pr
   }
 
   async function usage(db: Db, orgId: string): Promise<Record<Resource, number>> {
-    const ids = orgWorkspaceIds(db, orgId);
+    // Plan limits count the whole organization, whatever the caller is allowed to see.
+    const ids = allOrgWorkspaceIds(db, orgId);
     const one = async (table: typeof monitors | typeof assets | typeof statusPages) => {
       const [r] = await db
         .select({ n: count() })

@@ -59,8 +59,11 @@ export const statusPageModule = (
   const appHost = hostOf(env.WEB_ORIGIN);
   const ownHosts = new Set([appHost, hostOf(env.BETTER_AUTH_URL)].filter((h): h is string => !!h));
 
-  const owned = (orgId: string, id: string) =>
-    and(eq(statusPages.id, id), inArray(statusPages.workspaceId, orgWorkspaceIds(db, orgId)));
+  const owned = (orgId: string, userId: string, id: string) =>
+    and(
+      eq(statusPages.id, id),
+      inArray(statusPages.workspaceId, orgWorkspaceIds(db, orgId, userId)),
+    );
 
   async function withComponents(pageIds: string[]) {
     if (pageIds.length === 0)
@@ -136,13 +139,13 @@ export const statusPageModule = (
     .use(authP)
     .get(
       "/",
-      async ({ orgId, query, role }) => {
+      async ({ user, orgId, query, role }) => {
         const pages = await db
           .select()
           .from(statusPages)
           .where(
             and(
-              inArray(statusPages.workspaceId, orgWorkspaceIds(db, orgId)),
+              inArray(statusPages.workspaceId, orgWorkspaceIds(db, orgId, user.id)),
               query.workspaceId ? eq(statusPages.workspaceId, query.workspaceId) : undefined,
             ),
           )
@@ -181,8 +184,8 @@ export const statusPageModule = (
     )
     .post(
       "/",
-      async ({ body, orgId, set }) => {
-        await requireWorkspace(db, orgId, body.workspaceId);
+      async ({ user, body, orgId, set }) => {
+        await requireWorkspace(db, orgId, body.workspaceId, user.id);
         await checkComponents(body.workspaceId, body.components);
         await checkSecurityAsset(body.workspaceId, body.securityAssetId);
         await billing.assertCanCreate(db, orgId, "statusPages");
@@ -207,8 +210,11 @@ export const statusPageModule = (
     )
     .patch(
       "/:id",
-      async ({ params, body, orgId }) => {
-        const [page] = await db.select().from(statusPages).where(owned(orgId, params.id));
+      async ({ user, params, body, orgId }) => {
+        const [page] = await db
+          .select()
+          .from(statusPages)
+          .where(owned(orgId, user.id, params.id));
         if (!page) throw new HttpError(404, "Status page not found");
         const { components, customDomain, ...fields } = body;
         if (components) await checkComponents(page.workspaceId, components);
@@ -250,8 +256,11 @@ export const statusPageModule = (
     )
     .post(
       "/:id/verify-domain",
-      async ({ params, orgId }) => {
-        const [page] = await db.select().from(statusPages).where(owned(orgId, params.id));
+      async ({ user, params, orgId }) => {
+        const [page] = await db
+          .select()
+          .from(statusPages)
+          .where(owned(orgId, user.id, params.id));
         if (!page) throw new HttpError(404, "Status page not found");
         if (!page.customDomain || !page.domainToken)
           throw new HttpError(409, "Set a custom domain first.");
@@ -292,12 +301,15 @@ export const statusPageModule = (
     )
     .delete(
       "/:id",
-      async ({ params, orgId }) => {
-        const rows = await db.delete(statusPages).where(owned(orgId, params.id)).returning({
-          id: statusPages.id,
-          slug: statusPages.slug,
-          domain: statusPages.customDomain,
-        });
+      async ({ user, params, orgId }) => {
+        const rows = await db
+          .delete(statusPages)
+          .where(owned(orgId, user.id, params.id))
+          .returning({
+            id: statusPages.id,
+            slug: statusPages.slug,
+            domain: statusPages.customDomain,
+          });
         if (rows.length === 0) throw new HttpError(404, "Status page not found");
         forgetStatusPage(rows[0]!.slug, `domain:${rows[0]!.domain}`);
         return { ok: true as const };

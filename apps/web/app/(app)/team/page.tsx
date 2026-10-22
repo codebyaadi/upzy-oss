@@ -13,9 +13,11 @@ import { useConfirm } from "@/components/app/confirm";
 import { SelectField } from "@/components/app/select-field";
 import { ErrorNote, Field, ListSkeleton, PageHeader, Panel } from "@/components/app/ui";
 import { useWorkspace } from "@/components/app/workspace";
+import { WorkspaceAccess, type AccessDraft } from "@/components/app/workspace-access";
+import { api } from "@/lib/api";
 import { dateTime, timeAgo } from "@/lib/format";
 import { useAction } from "@/lib/use-action";
-import { useApi } from "@/lib/use-api";
+import { unwrap, useApi } from "@/lib/use-api";
 
 const ROLE_HELP: { role: Role; summary: string }[] = [
   { role: "viewer", summary: "Read-only: sees monitors, incidents, findings and alerts." },
@@ -41,10 +43,19 @@ async function ok<T extends { error?: { message?: string } | null }>(p: Promise<
 }
 
 export default function TeamPage() {
-  const { orgId, user, role: myRole, can } = useWorkspace();
+  const { orgId, user, role: myRole, can, workspaces } = useWorkspace();
   const confirm = useConfirm();
   const { run, isPending } = useAction();
   const [inviteRole, setInviteRole] = useState<Role>("member");
+  const [inviteAccess, setInviteAccess] = useState<AccessDraft>({
+    limited: false,
+    workspaceIds: [],
+  });
+  const [editing, setEditing] = useState<{ userId: string; draft: AccessDraft } | null>(null);
+  const access = useApi(can("admin") ? `access:${orgId}` : null, () => unwrap(api.access.get()));
+  const accessOf = (userId: string) => access.data?.members.find((m) => m.userId === userId);
+  const nameOf = (id: string) => workspaces.find((w) => w.id === id)?.name ?? "a workspace";
+  const canLimit = (r: Role) => r === "viewer" || r === "member";
 
   const org = useApi(`team:${orgId}`, async () => {
     const { data, error } = await organization.getFullOrganization({
@@ -61,13 +72,32 @@ export default function TeamPage() {
     const done = await run(
       "invite",
       async () => {
-        await ok(organization.inviteMember({ email, role: inviteRole, organizationId: orgId }));
-        await org.mutate();
+        const limited = inviteAccess.limited && canLimit(inviteRole);
+        // The limit is recorded first and applied when the invitation is accepted, so there is never a moment of full access.
+        if (limited)
+          await unwrap(
+            api.access.invited.put({
+              email,
+              role: inviteRole,
+              restricted: true,
+              workspaceIds: inviteAccess.workspaceIds,
+            }),
+          );
+        try {
+          await ok(organization.inviteMember({ email, role: inviteRole, organizationId: orgId }));
+        } catch (e) {
+          if (limited) await api.access.invited.delete({}, { query: { email } });
+          throw e;
+        }
+        await Promise.all([org.mutate(), access.mutate()]);
         return true;
       },
       { success: `Invitation sent to ${email}`, error: "Couldn't send the invitation" },
     );
-    if (done) form.reset();
+    if (done) {
+      form.reset();
+      setInviteAccess({ limited: false, workspaceIds: [] });
+    }
   }
 
   const changeRole = (memberId: string, name: string, role: Role) =>
@@ -104,9 +134,32 @@ export default function TeamPage() {
       `cancel:${invitationId}`,
       async () => {
         await ok(organization.cancelInvitation({ invitationId }));
-        await org.mutate();
+        // The invitation is gone, so its recorded limit goes too.
+        await api.access.invited.delete({}, { query: { email } });
+        await Promise.all([org.mutate(), access.mutate()]);
       },
       { success: `Invitation to ${email} cancelled`, error: "Couldn't cancel the invitation" },
+    );
+
+  const saveAccess = (userId: string, name: string, draft: AccessDraft) =>
+    run(
+      `access:${userId}`,
+      async () => {
+        await unwrap(
+          api.access.member({ userId }).put({
+            restricted: draft.limited,
+            workspaceIds: draft.limited ? draft.workspaceIds : [],
+          }),
+        );
+        await access.mutate();
+        setEditing(null);
+      },
+      {
+        success: draft.limited
+          ? `${name} is limited to the chosen workspaces`
+          : `${name} sees every workspace`,
+        error: "Couldn't change access",
+      },
     );
 
   const members = org.data?.members ?? [];
@@ -145,6 +198,14 @@ export default function TeamPage() {
                         {m.userId === user.id && <Badge variant="secondary">You</Badge>}
                       </p>
                       <p className="text-muted-foreground truncate text-sm">{m.user.email}</p>
+                      {accessOf(m.userId)?.restricted && (
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          Sees only:{" "}
+                          {accessOf(m.userId)!.workspaceIds.length
+                            ? accessOf(m.userId)!.workspaceIds.map(nameOf).join(", ")
+                            : "nothing yet"}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       {manageable ? (
@@ -160,6 +221,21 @@ export default function TeamPage() {
                           <ActionMenu
                             label={`Actions for ${m.user.name}`}
                             actions={[
+                              ...(canLimit(current)
+                                ? [
+                                    {
+                                      label: "Workspace access…",
+                                      onSelect: () =>
+                                        setEditing({
+                                          userId: m.userId,
+                                          draft: {
+                                            limited: accessOf(m.userId)?.restricted ?? false,
+                                            workspaceIds: accessOf(m.userId)?.workspaceIds ?? [],
+                                          },
+                                        }),
+                                    },
+                                  ]
+                                : []),
                               {
                                 label: "Remove from organization",
                                 destructive: true,
@@ -174,6 +250,28 @@ export default function TeamPage() {
                         </Badge>
                       )}
                     </div>
+                    {editing?.userId === m.userId && (
+                      <div className="bg-accent/40 w-full space-y-3 rounded-2xl p-4">
+                        <WorkspaceAccess
+                          idPrefix={`acc-${m.userId}`}
+                          workspaces={workspaces}
+                          value={editing.draft}
+                          onChange={(draft) => setEditing({ userId: m.userId, draft })}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            loading={isPending(`access:${m.userId}`)}
+                            onClick={() => saveAccess(m.userId, m.user.name, editing.draft)}
+                          >
+                            Save access
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </li>
                 );
               })}
@@ -194,6 +292,13 @@ export default function TeamPage() {
                       <span className="capitalize">{i.role}</span>
                       <span className="text-muted-foreground block text-xs">
                         invited {timeAgo(i.createdAt)} · expires {dateTime(i.expiresAt)}
+                        {access.data?.invited.find((x) => x.email === i.email.toLowerCase()) &&
+                          ` · sees only ${
+                            access.data.invited
+                              .find((x) => x.email === i.email.toLowerCase())!
+                              .workspaceIds.map(nameOf)
+                              .join(", ") || "nothing yet"
+                          }`}
                       </span>
                     </span>
                     <Can min="admin">
@@ -246,6 +351,14 @@ export default function TeamPage() {
                   options={roleOptions(assignable.filter((r) => r !== "owner"))}
                 />
               </Field>
+              {canLimit(inviteRole) && workspaces.length > 1 && (
+                <WorkspaceAccess
+                  idPrefix="invite"
+                  workspaces={workspaces}
+                  value={inviteAccess}
+                  onChange={setInviteAccess}
+                />
+              )}
               <Button type="submit" className="w-full" loading={isPending("invite")}>
                 Send invitation
               </Button>

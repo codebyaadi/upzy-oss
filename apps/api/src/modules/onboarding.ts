@@ -20,8 +20,8 @@ const { assets, monitors } = schema;
 export const onboardingModule = (db: Db, authP: AuthPlugin, billing: Billing) =>
   new Elysia({ prefix: "/onboarding" }).use(authP).post(
     "/site",
-    async ({ body, orgId, set }) => {
-      await requireWorkspace(db, orgId, body.workspaceId);
+    async ({ user, body, orgId, set }) => {
+      await requireWorkspace(db, orgId, body.workspaceId, user.id);
       const site = parseSite(body.site);
       if (!site) throw new HttpError(422, "Enter a public website address like example.com");
       const ws = body.workspaceId;

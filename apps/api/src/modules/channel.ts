@@ -34,15 +34,15 @@ const publicColumns = {
 const host = (u: string) => new URL(u).host;
 
 export const channelModule = (db: Db, authP: AuthPlugin, encryptionKey: string) => {
-  const owned = (orgId: string, id: string) =>
-    and(eq(channels.id, id), inArray(channels.workspaceId, orgWorkspaceIds(db, orgId)));
+  const owned = (orgId: string, userId: string, id: string) =>
+    and(eq(channels.id, id), inArray(channels.workspaceId, orgWorkspaceIds(db, orgId, userId)));
 
   return new Elysia({ prefix: "/channel" })
     .use(authP)
     .post(
       "/",
-      async ({ body, orgId, set }) => {
-        await requireWorkspace(db, orgId, body.workspaceId);
+      async ({ user, body, orgId, set }) => {
+        await requireWorkspace(db, orgId, body.workspaceId, user.id);
         let config: Record<string, string>;
         let summary: string;
         let secret: string | undefined;
@@ -78,13 +78,13 @@ export const channelModule = (db: Db, authP: AuthPlugin, encryptionKey: string) 
     )
     .get(
       "/",
-      ({ orgId, query }) =>
+      ({ user, orgId, query }) =>
         db
           .select(publicColumns)
           .from(channels)
           .where(
             and(
-              inArray(channels.workspaceId, orgWorkspaceIds(db, orgId)),
+              inArray(channels.workspaceId, orgWorkspaceIds(db, orgId, user.id)),
               query.workspaceId ? eq(channels.workspaceId, query.workspaceId) : undefined,
             ),
           )
@@ -93,11 +93,11 @@ export const channelModule = (db: Db, authP: AuthPlugin, encryptionKey: string) 
     )
     .patch(
       "/:id",
-      async ({ params, body, orgId }) => {
+      async ({ user, params, body, orgId }) => {
         const [row] = await db
           .update(channels)
           .set(body)
-          .where(owned(orgId, params.id))
+          .where(owned(orgId, user.id, params.id))
           .returning(publicColumns);
         if (!row) throw new HttpError(404, "Channel not found");
         return row;
@@ -106,10 +106,10 @@ export const channelModule = (db: Db, authP: AuthPlugin, encryptionKey: string) 
     )
     .delete(
       "/:id",
-      async ({ params, orgId, set }) => {
+      async ({ user, params, orgId, set }) => {
         const rows = await db
           .delete(channels)
-          .where(owned(orgId, params.id))
+          .where(owned(orgId, user.id, params.id))
           .returning({ id: channels.id });
         if (rows.length === 0) throw new HttpError(404, "Channel not found");
         set.status = 204;
@@ -118,8 +118,11 @@ export const channelModule = (db: Db, authP: AuthPlugin, encryptionKey: string) 
     )
     .post(
       "/:id/test",
-      async ({ params, orgId, set }) => {
-        const [row] = await db.select().from(channels).where(owned(orgId, params.id));
+      async ({ user, params, orgId, set }) => {
+        const [row] = await db
+          .select()
+          .from(channels)
+          .where(owned(orgId, user.id, params.id));
         if (!row) throw new HttpError(404, "Channel not found");
         const config = {
           kind: row.kind,
@@ -154,11 +157,11 @@ export const channelModule = (db: Db, authP: AuthPlugin, encryptionKey: string) 
     )
     .get(
       "/:id/deliveries",
-      async ({ params, orgId }) => {
+      async ({ user, params, orgId }) => {
         const [row] = await db
           .select({ id: channels.id })
           .from(channels)
-          .where(owned(orgId, params.id));
+          .where(owned(orgId, user.id, params.id));
         if (!row) throw new HttpError(404, "Channel not found");
         return db
           .select({

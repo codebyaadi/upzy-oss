@@ -415,13 +415,13 @@ export const aiModule = (db: Db, authP: AuthPlugin, ai: AiDeps, encryptionKey?: 
     )
     .post(
       "/copilot",
-      async ({ body, orgId }) => {
+      async ({ user, body, orgId }) => {
         const refs = new Refs();
         let result;
         try {
           result = await askCopilot(ai.gateway, orgId, {
             messages: body.messages,
-            tools: copilotTools(db, orgId, refs),
+            tools: copilotTools(db, orgId, user.id, refs),
           });
         } catch (e) {
           toHttp(e);
@@ -443,8 +443,8 @@ export const aiModule = (db: Db, authP: AuthPlugin, ai: AiDeps, encryptionKey?: 
     )
     .post(
       "/monitor-draft",
-      async ({ body, orgId }) => {
-        await requireWorkspace(db, orgId, body.workspaceId);
+      async ({ user, body, orgId }) => {
+        await requireWorkspace(db, orgId, body.workspaceId, user.id);
         let result;
         try {
           result = await draftMonitor(ai.gateway, orgId, body.text);
@@ -483,7 +483,7 @@ export const aiModule = (db: Db, authP: AuthPlugin, ai: AiDeps, encryptionKey?: 
     )
     .post(
       "/finding/:id/explain",
-      async ({ params, body, orgId, set }) => {
+      async ({ user, params, body, orgId, set }) => {
         const [row] = await db
           .select({
             id: findings.id,
@@ -494,7 +494,7 @@ export const aiModule = (db: Db, authP: AuthPlugin, ai: AiDeps, encryptionKey?: 
           .where(
             and(
               eq(findings.id, params.id),
-              inArray(findings.workspaceId, orgWorkspaceIds(db, orgId)),
+              inArray(findings.workspaceId, orgWorkspaceIds(db, orgId, user.id)),
             ),
           );
         if (!row) throw new HttpError(404, "Finding not found");

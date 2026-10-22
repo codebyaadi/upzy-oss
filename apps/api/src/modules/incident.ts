@@ -51,15 +51,15 @@ const ListQuery = z.object({
 });
 
 export const incidentModule = (db: Db, authP: AuthPlugin) => {
-  const owned = (orgId: string, id: string) =>
-    and(eq(incidents.id, id), inArray(incidents.workspaceId, orgWorkspaceIds(db, orgId)));
+  const owned = (orgId: string, userId: string, id: string) =>
+    and(eq(incidents.id, id), inArray(incidents.workspaceId, orgWorkspaceIds(db, orgId, userId)));
 
   return (
     new Elysia({ prefix: "/incident" })
       .use(authP)
       .get(
         "/",
-        ({ orgId, query }) =>
+        ({ user, orgId, query }) =>
           db
             .select({
               id: incidents.id,
@@ -76,7 +76,7 @@ export const incidentModule = (db: Db, authP: AuthPlugin) => {
             .leftJoin(monitors, eq(monitors.id, incidents.monitorId))
             .where(
               and(
-                inArray(incidents.workspaceId, orgWorkspaceIds(db, orgId)),
+                inArray(incidents.workspaceId, orgWorkspaceIds(db, orgId, user.id)),
                 query.workspaceId ? eq(incidents.workspaceId, query.workspaceId) : undefined,
                 query.monitorId ? eq(incidents.monitorId, query.monitorId) : undefined,
                 query.status === "active"
@@ -92,14 +92,14 @@ export const incidentModule = (db: Db, authP: AuthPlugin) => {
       )
       .get(
         "/group/:id",
-        async ({ params, orgId }) => {
+        async ({ user, params, orgId }) => {
           const [g] = await db
             .select()
             .from(incidentGroups)
             .where(
               and(
                 eq(incidentGroups.id, params.id),
-                inArray(incidentGroups.workspaceId, orgWorkspaceIds(db, orgId)),
+                inArray(incidentGroups.workspaceId, orgWorkspaceIds(db, orgId, user.id)),
               ),
             );
           if (!g) throw new HttpError(404, "Group not found");
@@ -123,14 +123,14 @@ export const incidentModule = (db: Db, authP: AuthPlugin) => {
       )
       .post(
         "/group/:id/summary",
-        async ({ params, orgId, set }) => {
+        async ({ user, params, orgId, set }) => {
           const [g] = await db
             .select({ id: incidentGroups.id, status: incidentGroups.summaryStatus })
             .from(incidentGroups)
             .where(
               and(
                 eq(incidentGroups.id, params.id),
-                inArray(incidentGroups.workspaceId, orgWorkspaceIds(db, orgId)),
+                inArray(incidentGroups.workspaceId, orgWorkspaceIds(db, orgId, user.id)),
               ),
             );
           if (!g) throw new HttpError(404, "Group not found");
@@ -158,8 +158,11 @@ export const incidentModule = (db: Db, authP: AuthPlugin) => {
       )
       .get(
         "/:id",
-        async ({ params, orgId }) => {
-          const [incident] = await db.select().from(incidents).where(owned(orgId, params.id));
+        async ({ user, params, orgId }) => {
+          const [incident] = await db
+            .select()
+            .from(incidents)
+            .where(owned(orgId, user.id, params.id));
           if (!incident) throw new HttpError(404, "Incident not found");
 
           const [monitor] = incident.monitorId
@@ -240,7 +243,7 @@ export const incidentModule = (db: Db, authP: AuthPlugin) => {
           const [inc] = await db
             .select({ id: incidents.id })
             .from(incidents)
-            .where(owned(orgId, params.id));
+            .where(owned(orgId, user.id, params.id));
           if (!inc) throw new HttpError(404, "Incident not found");
           const [row] = await db
             .insert(incidentUpdates)
@@ -264,11 +267,11 @@ export const incidentModule = (db: Db, authP: AuthPlugin) => {
       )
       .delete(
         "/:id/updates/:updateId",
-        async ({ params, orgId }) => {
+        async ({ user, params, orgId }) => {
           const [inc] = await db
             .select({ id: incidents.id })
             .from(incidents)
-            .where(owned(orgId, params.id));
+            .where(owned(orgId, user.id, params.id));
           if (!inc) throw new HttpError(404, "Incident not found");
           const gone = await db
             .delete(incidentUpdates)
@@ -284,7 +287,7 @@ export const incidentModule = (db: Db, authP: AuthPlugin) => {
       )
       .post(
         "/:id/triage",
-        async ({ params, orgId, set }) => {
+        async ({ user, params, orgId, set }) => {
           const [row] = await db
             .select({
               id: incidents.id,
@@ -292,7 +295,7 @@ export const incidentModule = (db: Db, authP: AuthPlugin) => {
               status: incidents.aiTriageStatus,
             })
             .from(incidents)
-            .where(owned(orgId, params.id));
+            .where(owned(orgId, user.id, params.id));
           if (!row) throw new HttpError(404, "Incident not found");
           if (!row.monitorId)
             throw new HttpError(
@@ -323,11 +326,11 @@ export const incidentModule = (db: Db, authP: AuthPlugin) => {
       )
       .get(
         "/:id/postmortem",
-        async ({ params, orgId }) => {
+        async ({ user, params, orgId }) => {
           const [inc] = await db
             .select({ id: incidents.id })
             .from(incidents)
-            .where(owned(orgId, params.id));
+            .where(owned(orgId, user.id, params.id));
           if (!inc) throw new HttpError(404, "Incident not found");
           const [row] = await db
             .select()
@@ -350,11 +353,11 @@ export const incidentModule = (db: Db, authP: AuthPlugin) => {
       )
       .post(
         "/:id/postmortem",
-        async ({ params, body, orgId, set }) => {
+        async ({ user, params, body, orgId, set }) => {
           const [inc] = await db
             .select({ id: incidents.id, status: incidents.status, monitorId: incidents.monitorId })
             .from(incidents)
-            .where(owned(orgId, params.id));
+            .where(owned(orgId, user.id, params.id));
           if (!inc) throw new HttpError(404, "Incident not found");
           if (inc.status !== "resolved" || !inc.monitorId)
             throw new HttpError(409, "A postmortem can be drafted once the incident is resolved.");
@@ -402,7 +405,7 @@ export const incidentModule = (db: Db, authP: AuthPlugin) => {
           const [inc] = await db
             .select({ id: incidents.id, status: incidents.status })
             .from(incidents)
-            .where(owned(orgId, params.id));
+            .where(owned(orgId, user.id, params.id));
           if (!inc) throw new HttpError(404, "Incident not found");
           if (inc.status !== "resolved")
             throw new HttpError(409, "A postmortem can be written once the incident is resolved.");
@@ -424,11 +427,11 @@ export const incidentModule = (db: Db, authP: AuthPlugin) => {
       )
       .patch(
         "/:id/acknowledge",
-        async ({ params, orgId }) => {
+        async ({ user, params, orgId }) => {
           const [row] = await db
             .update(incidents)
             .set({ status: "acknowledged" })
-            .where(and(owned(orgId, params.id), eq(incidents.status, "open")))
+            .where(and(owned(orgId, user.id, params.id), eq(incidents.status, "open")))
             .returning();
           if (!row) throw new HttpError(409, "Only open incidents can be acknowledged");
           return row;

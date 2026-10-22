@@ -73,10 +73,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   // A fresh organization has no workspace yet: create the default one.
   useEffect(() => {
-    if (workspaces && workspaces.length === 0) {
+    // Only someone who can create workspaces does: a member limited to some workspaces may simply have none yet.
+    if (workspaces && workspaces.length === 0 && roleData && hasRole(roleData, "admin")) {
       void unwrap(api.workspace.post({ name: "Default" })).then(() => mutate());
     }
-  }, [workspaces, mutate]);
+  }, [workspaces, mutate, roleData]);
 
   const setWorkspaceId = useCallback((id: string) => {
     setSelected(id);
@@ -100,6 +101,19 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
   }, [session, workspaces, selected, setWorkspaceId, roleData, orgId]);
 
+  // Signed in, but limited to workspaces they don't have yet.
+  if (!value && workspaces && workspaces.length === 0 && roleData && !hasRole(roleData, "admin"))
+    return (
+      <div className="ambient grid min-h-svh place-items-center px-4">
+        <div className="bg-card/70 max-w-md rounded-3xl border p-8 text-center shadow-[var(--shadow-panel)]">
+          <h1 className="text-2xl font-extrabold tracking-tight">No workspace yet</h1>
+          <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
+            You&apos;re in this organization, but you haven&apos;t been given access to a workspace.
+            Ask an admin to add you to one.
+          </p>
+        </div>
+      </div>
+    );
   if (!value) return <AppLoading />;
   return <WorkspaceContext value={value}>{children}</WorkspaceContext>;
 }

@@ -28,14 +28,15 @@ const VERIFY_COOLDOWN_MS = 15_000;
 const SummaryQuery = z.object({ workspaceId: z.uuid().optional() });
 
 export const findingModule = (db: Db, authP: AuthPlugin) => {
-  const inOrg = (orgId: string) => inArray(findings.workspaceId, orgWorkspaceIds(db, orgId));
+  const inOrg = (orgId: string, userId: string) =>
+    inArray(findings.workspaceId, orgWorkspaceIds(db, orgId, userId));
 
   return (
     new Elysia({ prefix: "/finding" })
       .use(authP)
       .get(
         "/",
-        ({ orgId, query }) =>
+        ({ user, orgId, query }) =>
           db
             .select({
               id: findings.id,
@@ -54,7 +55,7 @@ export const findingModule = (db: Db, authP: AuthPlugin) => {
             .innerJoin(assets, eq(assets.id, findings.assetId))
             .where(
               and(
-                inOrg(orgId),
+                inOrg(orgId, user.id),
                 query.workspaceId ? eq(findings.workspaceId, query.workspaceId) : undefined,
                 query.assetId ? eq(findings.assetId, query.assetId) : undefined,
                 query.status === "all" ? undefined : eq(findings.status, query.status),
@@ -68,13 +69,13 @@ export const findingModule = (db: Db, authP: AuthPlugin) => {
       // Registered before "/:id" so "summary" is not parsed as an id.
       .get(
         "/summary",
-        async ({ orgId, query }) => {
+        async ({ user, orgId, query }) => {
           const rows = await db
             .select({ severity: findings.severity, n: sql<number>`count(*)::int` })
             .from(findings)
             .where(
               and(
-                inOrg(orgId),
+                inOrg(orgId, user.id),
                 eq(findings.status, "open"),
                 query.workspaceId ? eq(findings.workspaceId, query.workspaceId) : undefined,
               ),
@@ -88,7 +89,7 @@ export const findingModule = (db: Db, authP: AuthPlugin) => {
       )
       .get(
         "/:id",
-        async ({ params, orgId }) => {
+        async ({ user, params, orgId }) => {
           const [row] = await db
             .select({
               finding: findings,
@@ -99,7 +100,7 @@ export const findingModule = (db: Db, authP: AuthPlugin) => {
             })
             .from(findings)
             .innerJoin(assets, eq(assets.id, findings.assetId))
-            .where(and(eq(findings.id, params.id), inOrg(orgId)));
+            .where(and(eq(findings.id, params.id), inOrg(orgId, user.id)));
           if (!row) throw new HttpError(404, "Finding not found");
           const sent = await db
             .select({
@@ -142,7 +143,7 @@ export const findingModule = (db: Db, authP: AuthPlugin) => {
       // "Verify fix": re-run just this finding's check now. The worker resolves the finding if the problem is gone.
       .post(
         "/:id/verify",
-        async ({ params, orgId, set }) => {
+        async ({ user, params, orgId, set }) => {
           const [f] = await db
             .select({
               id: findings.id,
@@ -150,7 +151,7 @@ export const findingModule = (db: Db, authP: AuthPlugin) => {
               last: findings.lastVerifiedAt,
             })
             .from(findings)
-            .where(and(eq(findings.id, params.id), inOrg(orgId)));
+            .where(and(eq(findings.id, params.id), inOrg(orgId, user.id)));
           if (!f) throw new HttpError(404, "Finding not found");
           if (f.status !== "open")
             throw new HttpError(409, "Only open findings can be re-checked.");
@@ -168,11 +169,11 @@ export const findingModule = (db: Db, authP: AuthPlugin) => {
       )
       .patch(
         "/:id",
-        async ({ params, body, orgId }) => {
+        async ({ user, params, body, orgId }) => {
           const [current] = await db
             .select({ status: findings.status })
             .from(findings)
-            .where(and(eq(findings.id, params.id), inOrg(orgId)));
+            .where(and(eq(findings.id, params.id), inOrg(orgId, user.id)));
           if (!current) throw new HttpError(404, "Finding not found");
           if (current.status === "resolved")
             throw new HttpError(409, "Resolved findings reopen on their own if the issue returns");

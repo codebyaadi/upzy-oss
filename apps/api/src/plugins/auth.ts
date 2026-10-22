@@ -1,7 +1,9 @@
 import { effectiveRole, hasRole, type Role } from "@upzy/auth/roles";
 import type { Auth } from "@upzy/auth/types";
+import type { Db } from "@upzy/db";
 import { Elysia } from "elysia";
 
+import { isRestricted } from "../lib/scope";
 import { HttpError } from "./errors";
 
 /**
@@ -9,9 +11,10 @@ import { HttpError } from "./errors";
  *   { auth: true }  requires a session
  *   { org: true }   requires an active organization and membership (any role, including viewer)
  *   { org: "admin" } additionally requires that role or higher (viewer < member < admin < owner)
- * `org` injects `user`, `session`, `orgId` and the caller's effective `role`.
+ * `org` injects `user`, `session`, `orgId` and the caller's effective `role`. A member limited to some workspaces is
+ * capped at `member` here, so they can never reach an admin-only route, whatever role is stored for them.
  */
-export const authPlugin = (auth: Pick<Auth, "handler" | "api">) =>
+export const authPlugin = (auth: Pick<Auth, "handler" | "api">, db?: Db) =>
   new Elysia({ name: "auth" })
     .mount(auth.handler as unknown as (req: Request) => Promise<Response>)
     .macro({
@@ -33,11 +36,15 @@ export const authPlugin = (auth: Pick<Auth, "handler" | "api">) =>
             (r) => r.role as string,
             () => null,
           );
-          const role = effectiveRole(stored);
-          if (!role) throw new HttpError(403, "You are not a member of this organization.");
+          const storedRole = effectiveRole(stored);
+          if (!storedRole) throw new HttpError(403, "You are not a member of this organization.");
+          // Only an admin or owner can be affected by the cap, so only they cost the extra lookup.
+          const limited =
+            db && hasRole(stored, "admin") ? await isRestricted(db, orgId, session.user.id) : false;
+          const role: Role = limited && hasRole(stored, "admin") ? "member" : storedRole;
 
           const required: Role = minimum === true ? "viewer" : minimum;
-          if (!hasRole(stored, required)) {
+          if (!hasRole(role, required)) {
             throw new HttpError(403, `This action requires the ${required} role or higher.`, {
               organizationId: orgId,
               userId: session.user.id,

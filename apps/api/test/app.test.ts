@@ -16,7 +16,8 @@ const makeApp = (
   auditSink: AuditSink = async () => {},
 ) =>
   createApp({
-    db: {} as Db, // validation and auth run before any query in these tests
+    // Validation and auth run before any query in these tests; the one lookup auth makes (is an admin limited?) finds nothing.
+    db: { select: () => ({ from: () => ({ where: async () => [] }) }) } as unknown as Db,
     webOrigin: "http://localhost:3001",
     encryptionKey: Buffer.alloc(32, 1).toString("base64"),
     auditSink,

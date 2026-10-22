@@ -3,6 +3,7 @@ import { healthFor, type Grade } from "@upzy/security";
 import { and, asc, count, eq, inArray, isNull } from "drizzle-orm";
 import { Elysia } from "elysia";
 
+import { orgWorkspaceIds } from "../lib/scope";
 import type { AuthPlugin } from "../plugins/auth";
 
 const { workspaces, monitors, incidents, findings, assets, statusPages } = schema;
@@ -35,11 +36,11 @@ export interface WorkspaceOverview {
 export const overviewModule = (db: Db, authP: AuthPlugin) =>
   new Elysia({ prefix: "/overview" }).use(authP).get(
     "/",
-    async ({ orgId }): Promise<WorkspaceOverview[]> => {
+    async ({ orgId, user }): Promise<WorkspaceOverview[]> => {
       const spaces = await db
         .select({ id: workspaces.id, name: workspaces.name })
         .from(workspaces)
-        .where(eq(workspaces.orgId, orgId))
+        .where(inArray(workspaces.id, orgWorkspaceIds(db, orgId, user.id)))
         .orderBy(asc(workspaces.name));
       if (spaces.length === 0) return [];
       const ids = spaces.map((s) => s.id);

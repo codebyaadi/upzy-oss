@@ -1,4 +1,10 @@
-import { deleteOrganization, ownedOrganizations, type Db } from "@upzy/db";
+import {
+  applyPendingAccess,
+  deleteOrganization,
+  isRestrictedMember,
+  ownedOrganizations,
+  type Db,
+} from "@upzy/db";
 import * as schema from "@upzy/db/schema";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -126,6 +132,34 @@ export const createAuth = (
         roles: orgRoles,
         teams: { enabled: true, maximumTeams: 10 },
         invitationExpiresIn: 60 * 60 * 24 * 7,
+        organizationHooks: {
+          // A limit set when inviting is applied before the membership exists, so there is never a moment when the
+          // person can see every workspace. Someone limited to some workspaces can only be a viewer or a member.
+          beforeAcceptInvitation: async ({ invitation, user }) => {
+            const admin = /(^|,)s*(admin|owner)s*(,|$)/.test(invitation.role ?? "");
+            const applied = await applyPendingAccess(db, {
+              organizationId: invitation.organizationId,
+              email: invitation.email,
+              userId: user.id,
+              allowed: !admin,
+            });
+            if (applied === "refused")
+              throw new APIError("BAD_REQUEST", {
+                message:
+                  "This invitation limits access to some workspaces, which only works for viewers and members. Ask for a new invitation.",
+              });
+          },
+          beforeUpdateMemberRole: async ({ member, newRole }) => {
+            if (
+              /(^|,)s*(admin|owner)s*(,|$)/.test(newRole) &&
+              (await isRestrictedMember(db, member.organizationId, member.userId))
+            )
+              throw new APIError("BAD_REQUEST", {
+                message:
+                  "This person is limited to some workspaces. Remove that limit before making them an admin or owner.",
+              });
+          },
+        },
         sendInvitationEmail: async ({ id, email, role, organization, inviter }) =>
           sendEmail(
             emails.invitation({

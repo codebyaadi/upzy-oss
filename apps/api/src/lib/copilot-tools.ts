@@ -62,8 +62,9 @@ const iso = (d: Date | null) => (d ? d.toISOString() : null);
  * organization comes from the session, never from the model. Arguments are validated and bounded, results are
  * capped, and each result is wrapped as untrusted data (monitor names, error text and evidence come from outside).
  */
-export function copilotTools(db: Db, orgId: string, refs: Refs): ToolSet {
-  const mine = (col: Parameters<typeof inArray>[0]) => inArray(col, orgWorkspaceIds(db, orgId));
+export function copilotTools(db: Db, orgId: string, userId: string, refs: Refs): ToolSet {
+  const mine = (col: Parameters<typeof inArray>[0]) =>
+    inArray(col, orgWorkspaceIds(db, orgId, userId));
   const R = (type: RefType, id: string, label: string) => refs.ref(type, id, label);
   const out = (name: string, data: unknown) =>
     fence(name, JSON.stringify(data), { maxChars: 12_000 });

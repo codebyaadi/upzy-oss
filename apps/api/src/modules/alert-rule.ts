@@ -13,15 +13,15 @@ const Params = z.object({ id: z.uuid() });
 const ListQuery = z.object({ workspaceId: z.uuid().optional() });
 
 export const alertRuleModule = (db: Db, authP: AuthPlugin) => {
-  const owned = (orgId: string, id: string) =>
-    and(eq(rules.id, id), inArray(rules.workspaceId, orgWorkspaceIds(db, orgId)));
+  const owned = (orgId: string, userId: string, id: string) =>
+    and(eq(rules.id, id), inArray(rules.workspaceId, orgWorkspaceIds(db, orgId, userId)));
 
   return new Elysia({ prefix: "/alert-rule" })
     .use(authP)
     .post(
       "/",
-      async ({ body, orgId, set }) => {
-        await requireWorkspace(db, orgId, body.workspaceId);
+      async ({ user, body, orgId, set }) => {
+        await requireWorkspace(db, orgId, body.workspaceId, user.id);
         const [channel] = await db
           .select({ id: channels.id })
           .from(channels)
@@ -45,13 +45,13 @@ export const alertRuleModule = (db: Db, authP: AuthPlugin) => {
     )
     .get(
       "/",
-      ({ orgId, query }) =>
+      ({ user, orgId, query }) =>
         db
           .select()
           .from(rules)
           .where(
             and(
-              inArray(rules.workspaceId, orgWorkspaceIds(db, orgId)),
+              inArray(rules.workspaceId, orgWorkspaceIds(db, orgId, user.id)),
               query.workspaceId ? eq(rules.workspaceId, query.workspaceId) : undefined,
             ),
           ),
@@ -59,8 +59,12 @@ export const alertRuleModule = (db: Db, authP: AuthPlugin) => {
     )
     .patch(
       "/:id",
-      async ({ params, body, orgId }) => {
-        const [row] = await db.update(rules).set(body).where(owned(orgId, params.id)).returning();
+      async ({ user, params, body, orgId }) => {
+        const [row] = await db
+          .update(rules)
+          .set(body)
+          .where(owned(orgId, user.id, params.id))
+          .returning();
         if (!row) throw new HttpError(404, "Alert rule not found");
         return row;
       },
@@ -68,10 +72,10 @@ export const alertRuleModule = (db: Db, authP: AuthPlugin) => {
     )
     .delete(
       "/:id",
-      async ({ params, orgId, set }) => {
+      async ({ user, params, orgId, set }) => {
         const deleted = await db
           .delete(rules)
-          .where(owned(orgId, params.id))
+          .where(owned(orgId, user.id, params.id))
           .returning({ id: rules.id });
         if (deleted.length === 0) throw new HttpError(404, "Alert rule not found");
         set.status = 204;

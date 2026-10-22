@@ -1,9 +1,10 @@
 import { schema, type Db } from "@upzy/db";
 import { CreateWorkspaceSchema, UpdateWorkspaceSchema } from "@upzy/validator";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { z } from "zod";
 
+import { orgWorkspaceIds } from "../lib/scope";
 import type { AuthPlugin } from "../plugins/auth";
 import { HttpError } from "../plugins/errors";
 
@@ -28,11 +29,11 @@ export const workspaceModule = (db: Db, authP: AuthPlugin) =>
     )
     .get(
       "/",
-      ({ orgId }) =>
+      ({ orgId, user }) =>
         db
           .select(columns)
           .from(workspaces)
-          .where(eq(workspaces.orgId, orgId))
+          .where(inArray(workspaces.id, orgWorkspaceIds(db, orgId, user.id)))
           .orderBy(asc(workspaces.name)),
       {
         org: true,
@@ -40,11 +41,16 @@ export const workspaceModule = (db: Db, authP: AuthPlugin) =>
     )
     .get(
       "/:id",
-      async ({ params, orgId }) => {
+      async ({ params, orgId, user }) => {
         const [row] = await db
           .select(columns)
           .from(workspaces)
-          .where(and(eq(workspaces.id, params.id), eq(workspaces.orgId, orgId)));
+          .where(
+            and(
+              eq(workspaces.id, params.id),
+              inArray(workspaces.id, orgWorkspaceIds(db, orgId, user.id)),
+            ),
+          );
         if (!row) throw new HttpError(404, "Workspace not found");
         return row;
       },

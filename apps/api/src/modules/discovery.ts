@@ -19,13 +19,14 @@ const ListQuery = z.object({
 });
 
 export const discoveryModule = (db: Db, authP: AuthPlugin, billing: Billing) => {
-  const inOrg = (orgId: string) => inArray(hosts.workspaceId, orgWorkspaceIds(db, orgId));
+  const inOrg = (orgId: string, userId: string) =>
+    inArray(hosts.workspaceId, orgWorkspaceIds(db, orgId, userId));
 
   return new Elysia({ prefix: "/discovery" })
     .use(authP)
     .get(
       "/",
-      ({ orgId, query }) =>
+      ({ user, orgId, query }) =>
         db
           .select({
             id: hosts.id,
@@ -47,7 +48,7 @@ export const discoveryModule = (db: Db, authP: AuthPlugin, billing: Billing) => 
           .innerJoin(assets, eq(assets.id, hosts.parentAssetId))
           .where(
             and(
-              inOrg(orgId),
+              inOrg(orgId, user.id),
               eq(hosts.status, query.status),
               query.workspaceId ? eq(hosts.workspaceId, query.workspaceId) : undefined,
             ),
@@ -62,7 +63,7 @@ export const discoveryModule = (db: Db, authP: AuthPlugin, billing: Billing) => 
     )
     .post(
       "/accept",
-      async ({ body, orgId }) => {
+      async ({ user, body, orgId }) => {
         const selected = await db
           .select({
             id: hosts.id,
@@ -71,7 +72,7 @@ export const discoveryModule = (db: Db, authP: AuthPlugin, billing: Billing) => 
             status: hosts.status,
           })
           .from(hosts)
-          .where(and(inOrg(orgId), inArray(hosts.id, body.ids)));
+          .where(and(inOrg(orgId, user.id), inArray(hosts.id, body.ids)));
 
         let accepted = 0;
         for (const h of selected) {
@@ -92,8 +93,8 @@ export const discoveryModule = (db: Db, authP: AuthPlugin, billing: Billing) => 
     )
     .post(
       "/classify",
-      async ({ body, orgId, set }) => {
-        await requireWorkspace(db, orgId, body.workspaceId);
+      async ({ user, body, orgId, set }) => {
+        await requireWorkspace(db, orgId, body.workspaceId, user.id);
         const [ai] = await db
           .select({ enabled: aiSettings.enabled })
           .from(aiSettings)
@@ -126,11 +127,11 @@ export const discoveryModule = (db: Db, authP: AuthPlugin, billing: Billing) => 
     )
     .post(
       "/dismiss",
-      async ({ body, orgId }) => {
+      async ({ user, body, orgId }) => {
         const rows = await db
           .update(hosts)
           .set({ status: "dismissed" })
-          .where(and(inOrg(orgId), inArray(hosts.id, body.ids), eq(hosts.status, "new")))
+          .where(and(inOrg(orgId, user.id), inArray(hosts.id, body.ids), eq(hosts.status, "new")))
           .returning({ id: hosts.id });
         return { dismissed: rows.length };
       },

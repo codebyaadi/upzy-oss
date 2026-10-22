@@ -127,8 +127,11 @@ run("ops copilot (postgres)", () => {
   let owner: Awaited<ReturnType<typeof person>>, viewer: typeof owner, other: typeof owner;
   const ids: Record<string, string> = {};
 
+  /** Any member of the organization: the copilot sees what its caller may see. */
+  const memberOf = async (orgId: string) =>
+    (await db.select().from(schema.members).where(eq(schema.members.organizationId, orgId)))[0]!.userId;
   const call = async (orgId: string, name: string, input: object, refs = new Refs()) => {
-    const tools = copilotTools(db, orgId, refs) as Record<
+    const tools = copilotTools(db, orgId, await memberOf(orgId), refs) as Record<
       string,
       {
         inputSchema: { parse: (v: unknown) => unknown };
@@ -397,7 +400,7 @@ run("ops copilot (postgres)", () => {
     });
 
     test("arguments are bounded", async () => {
-      const t = copilotTools(db, A.orgId, new Refs()) as Record<
+      const t = copilotTools(db, A.orgId, await memberOf(A.orgId), new Refs()) as Record<
         string,
         { inputSchema: { safeParse: (v: unknown) => { success: boolean } } }
       >;

@@ -15,10 +15,11 @@ import { z } from "zod";
 
 import type { Billing } from "../lib/billing";
 import { present } from "../lib/monitor-present";
+import { orgWorkspaceIds, requireWorkspace } from "../lib/scope";
 import type { AuthPlugin } from "../plugins/auth";
 import { HttpError } from "../plugins/errors";
 
-const { monitors, monitorChecks, workspaces } = schema;
+const { monitors, monitorChecks } = schema;
 const Params = z.object({ id: z.uuid() });
 const ListQuery = z.object({ workspaceId: z.uuid().optional() });
 const RANGES = {
@@ -47,24 +48,17 @@ export const monitorModule = (
       canSeePing: hasRole(role, "member"),
     });
 
-  /** Monitors only ever resolve through workspaces owned by the caller's organization. */
-  const orgWorkspaceIds = (orgId: string) =>
-    db.select({ id: workspaces.id }).from(workspaces).where(eq(workspaces.orgId, orgId));
-
-  const owned = (orgId: string, id: string) =>
-    and(eq(monitors.id, id), inArray(monitors.workspaceId, orgWorkspaceIds(orgId)));
+  /** Monitors only ever resolve through the workspaces this person may see in their organization. */
+  const owned = (orgId: string, userId: string, id: string) =>
+    and(eq(monitors.id, id), inArray(monitors.workspaceId, orgWorkspaceIds(db, orgId, userId)));
 
   return (
     new Elysia({ prefix: "/monitor" })
       .use(authP)
       .post(
         "/",
-        async ({ body, orgId, role, set }) => {
-          const [ws] = await db
-            .select({ id: workspaces.id })
-            .from(workspaces)
-            .where(and(eq(workspaces.id, body.workspaceId), eq(workspaces.orgId, orgId)));
-          if (!ws) throw new HttpError(404, "Workspace not found");
+        async ({ user, body, orgId, role, set }) => {
+          await requireWorkspace(db, orgId, body.workspaceId, user.id);
           await billing.assertCanCreate(db, orgId, "monitors");
 
           // A heartbeat is pinged by the job, so how often we look is our business, not a plan limit.
@@ -106,13 +100,13 @@ export const monitorModule = (
       )
       .get(
         "/",
-        async ({ orgId, role, query }) => {
+        async ({ user, orgId, role, query }) => {
           const rows = await db
             .select()
             .from(monitors)
             .where(
               and(
-                inArray(monitors.workspaceId, orgWorkspaceIds(orgId)),
+                inArray(monitors.workspaceId, orgWorkspaceIds(db, orgId, user.id)),
                 query.workspaceId ? eq(monitors.workspaceId, query.workspaceId) : undefined,
               ),
             )
@@ -162,8 +156,11 @@ export const monitorModule = (
       )
       .get(
         "/:id",
-        async ({ params, orgId, role }) => {
-          const [row] = await db.select().from(monitors).where(owned(orgId, params.id));
+        async ({ user, params, orgId, role }) => {
+          const [row] = await db
+            .select()
+            .from(monitors)
+            .where(owned(orgId, user.id, params.id));
           if (!row) throw new HttpError(404, "Monitor not found");
           return {
             ...show(row, role),
@@ -174,8 +171,11 @@ export const monitorModule = (
       )
       .patch(
         "/:id",
-        async ({ params, body, orgId, role }) => {
-          const [cur] = await db.select().from(monitors).where(owned(orgId, params.id));
+        async ({ user, params, body, orgId, role }) => {
+          const [cur] = await db
+            .select()
+            .from(monitors)
+            .where(owned(orgId, user.id, params.id));
           if (!cur) throw new HttpError(404, "Monitor not found");
           const heartbeat = cur.type === "heartbeat";
           // Speeding a monitor up is what a plan limits; slowing it down never is.
@@ -259,7 +259,7 @@ export const monitorModule = (
           const [row] = await db
             .update(monitors)
             .set(patch)
-            .where(owned(orgId, params.id))
+            .where(owned(orgId, user.id, params.id))
             .returning();
           return show(row!, role);
         },
@@ -268,8 +268,11 @@ export const monitorModule = (
       // A new ping address: the old one stops working at once. For when it was shared by mistake.
       .post(
         "/:id/rotate-token",
-        async ({ params, orgId, role }) => {
-          const [cur] = await db.select().from(monitors).where(owned(orgId, params.id));
+        async ({ user, params, orgId, role }) => {
+          const [cur] = await db
+            .select()
+            .from(monitors)
+            .where(owned(orgId, user.id, params.id));
           if (!cur) throw new HttpError(404, "Monitor not found");
           if (cur.type !== "heartbeat")
             throw new HttpError(409, "Only heartbeat monitors have a ping address.");
@@ -284,11 +287,11 @@ export const monitorModule = (
       )
       .get(
         "/:id/checks",
-        async ({ params, query, orgId }) => {
+        async ({ user, params, query, orgId }) => {
           const [m] = await db
             .select({ id: monitors.id })
             .from(monitors)
-            .where(owned(orgId, params.id));
+            .where(owned(orgId, user.id, params.id));
           if (!m) throw new HttpError(404, "Monitor not found");
           return db
             .select()
@@ -301,11 +304,11 @@ export const monitorModule = (
       )
       .get(
         "/:id/stats",
-        async ({ params, query, orgId }) => {
+        async ({ user, params, query, orgId }) => {
           const [m] = await db
             .select({ id: monitors.id })
             .from(monitors)
-            .where(owned(orgId, params.id));
+            .where(owned(orgId, user.id, params.id));
           if (!m) throw new HttpError(404, "Monitor not found");
           const { hours, bin } = RANGES[query.range];
           const since = new Date(Date.now() - hours * 3600_000);
@@ -349,10 +352,10 @@ export const monitorModule = (
       )
       .delete(
         "/:id",
-        async ({ params, orgId, set }) => {
+        async ({ user, params, orgId, set }) => {
           const rows = await db
             .delete(monitors)
-            .where(owned(orgId, params.id))
+            .where(owned(orgId, user.id, params.id))
             .returning({ id: monitors.id });
           if (rows.length === 0) throw new HttpError(404, "Monitor not found");
           set.status = 204;

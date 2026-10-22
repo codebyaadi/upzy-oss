@@ -5,6 +5,7 @@ import type { Db } from "@upzy/db";
 import { Elysia } from "elysia";
 
 import { createBilling, type BillingDeps } from "./lib/billing";
+import { accessModule } from "./modules/access";
 import { accountModule } from "./modules/account";
 import { aiModule, type AiDeps } from "./modules/ai";
 import { alertRuleModule } from "./modules/alert-rule";
@@ -102,7 +103,7 @@ export const createApp = ({
     process.env.BETTER_AUTH_URL ??
     "http://localhost:3000"
   ).replace(/(\/api\/auth)?\/*$/, "");
-  const authP = authPlugin(auth);
+  const authP = authPlugin(auth, db);
   const billing = createBilling(billingDeps);
   return (
     new Elysia()
@@ -129,6 +130,7 @@ export const createApp = ({
       .get("/auth-providers", () => authProviders())
       .use(workspaceModule(db, authP))
       .use(overviewModule(db, authP))
+      .use(accessModule(db, authP))
       .use(monitorModule(db, authP, billing, { encryptionKey, apiOrigin }))
       .use(channelModule(db, authP, encryptionKey))
       .use(alertRuleModule(db, authP))

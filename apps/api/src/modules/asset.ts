@@ -49,11 +49,14 @@ const instructions = (token: string) => ({
 });
 
 export const assetModule = (db: Db, authP: AuthPlugin, billing: Billing) => {
-  const owned = (orgId: string, id: string) =>
-    and(eq(assets.id, id), inArray(assets.workspaceId, orgWorkspaceIds(db, orgId)));
+  const owned = (orgId: string, userId: string, id: string) =>
+    and(eq(assets.id, id), inArray(assets.workspaceId, orgWorkspaceIds(db, orgId, userId)));
 
-  async function getOwned(orgId: string, id: string) {
-    const [row] = await db.select().from(assets).where(owned(orgId, id));
+  async function getOwned(orgId: string, userId: string, id: string) {
+    const [row] = await db
+      .select()
+      .from(assets)
+      .where(owned(orgId, userId, id));
     if (!row) throw new HttpError(404, "Asset not found");
     return row;
   }
@@ -63,8 +66,8 @@ export const assetModule = (db: Db, authP: AuthPlugin, billing: Billing) => {
       .use(authP)
       .post(
         "/",
-        async ({ body, orgId, set }) => {
-          await requireWorkspace(db, orgId, body.workspaceId);
+        async ({ user, body, orgId, set }) => {
+          await requireWorkspace(db, orgId, body.workspaceId, user.id);
           await billing.assertCanCreate(db, orgId, "assets");
           const { row, token } = await createAsset(db, body);
           set.status = 201;
@@ -74,13 +77,13 @@ export const assetModule = (db: Db, authP: AuthPlugin, billing: Billing) => {
       )
       .get(
         "/",
-        async ({ orgId, query }) => {
+        async ({ user, orgId, query }) => {
           const rows = await db
             .select(publicColumns)
             .from(assets)
             .where(
               and(
-                inArray(assets.workspaceId, orgWorkspaceIds(db, orgId)),
+                inArray(assets.workspaceId, orgWorkspaceIds(db, orgId, user.id)),
                 query.workspaceId ? eq(assets.workspaceId, query.workspaceId) : undefined,
               ),
             )
@@ -135,8 +138,8 @@ export const assetModule = (db: Db, authP: AuthPlugin, billing: Billing) => {
       )
       .get(
         "/:id",
-        async ({ params, orgId }) => {
-          const row = await getOwned(orgId, params.id);
+        async ({ user, params, orgId }) => {
+          const row = await getOwned(orgId, user.id, params.id);
           const [lastScan] = await db
             .select()
             .from(scans)
@@ -155,8 +158,8 @@ export const assetModule = (db: Db, authP: AuthPlugin, billing: Billing) => {
       // The grade with its breakdown and trend, plus one snippet that fixes every missing header at once.
       .get(
         "/:id/health",
-        async ({ params, orgId }) => {
-          const row = await getOwned(orgId, params.id);
+        async ({ user, params, orgId }) => {
+          const row = await getOwned(orgId, user.id, params.id);
           const health = (await healthFor(db, [row.id])).get(row.id) ?? null;
           const open = await db
             .select({ checkKey: findings.checkKey })
@@ -179,8 +182,8 @@ export const assetModule = (db: Db, authP: AuthPlugin, billing: Billing) => {
       )
       .post(
         "/:id/verify",
-        async ({ params, orgId }) => {
-          const row = await getOwned(orgId, params.id);
+        async ({ user, params, orgId }) => {
+          const row = await getOwned(orgId, user.id, params.id);
           if (row.verified) return { verified: true };
           const result = await verifyOwnership(
             { kind: row.kind, value: row.value },
@@ -212,8 +215,8 @@ export const assetModule = (db: Db, authP: AuthPlugin, billing: Billing) => {
       )
       .post(
         "/:id/scan",
-        async ({ params, orgId, set }) => {
-          const row = await getOwned(orgId, params.id);
+        async ({ user, params, orgId, set }) => {
+          const row = await getOwned(orgId, user.id, params.id);
           if (row.lastScanAt && Date.now() - row.lastScanAt.getTime() < SCAN_COOLDOWN_MS) {
             set.status = 429;
             return { message: "This asset was scanned a moment ago. Try again in a few minutes." };
@@ -226,8 +229,8 @@ export const assetModule = (db: Db, authP: AuthPlugin, billing: Billing) => {
       )
       .post(
         "/:id/discover",
-        async ({ params, orgId, set }) => {
-          const row = await getOwned(orgId, params.id);
+        async ({ user, params, orgId, set }) => {
+          const row = await getOwned(orgId, user.id, params.id);
           if (row.kind !== "domain")
             throw new HttpError(400, "Subdomain discovery runs on domains");
           if (
@@ -245,10 +248,10 @@ export const assetModule = (db: Db, authP: AuthPlugin, billing: Billing) => {
       )
       .delete(
         "/:id",
-        async ({ params, orgId, set }) => {
+        async ({ user, params, orgId, set }) => {
           const rows = await db
             .delete(assets)
-            .where(owned(orgId, params.id))
+            .where(owned(orgId, user.id, params.id))
             .returning({ id: assets.id });
           if (rows.length === 0) throw new HttpError(404, "Asset not found");
           set.status = 204;
