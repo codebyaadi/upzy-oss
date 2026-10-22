@@ -1,0 +1,30 @@
+name: AI eval
+
+# Runs the AI safety/quality scenarios (prompt injection, secret leakage, invented numbers) against the real
+# providers. Nightly rather than per commit: free tiers are rate limited and models drift. Skipped when the
+# repository has no AI_EVAL_API_KEY secret.
+on:
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # The eval plays one organization that brought its own key.
+      AI_EVAL_API_KEY: ${{ secrets.AI_EVAL_API_KEY }}
+      AI_EVAL_PROVIDER: ${{ vars.AI_EVAL_PROVIDER || 'groq' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - name: Live eval
+        working-directory: packages/ai
+        run: bun run eval

@@ -1,0 +1,2 @@
+ALTER TABLE "status_pages" ADD COLUMN "security_asset_id" uuid;--> statement-breakpoint
+ALTER TABLE "status_pages" ADD CONSTRAINT "status_pages_security_asset_id_assets_id_fk" FOREIGN KEY ("security_asset_id") REFERENCES "public"."assets"("id") ON DELETE set null ON UPDATE no action;

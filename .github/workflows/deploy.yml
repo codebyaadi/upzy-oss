@@ -1,0 +1,115 @@
+name: Deploy
+
+# Deliberate releases only: push a tag like v1.2.0, or run it by hand. Builds the images, pushes them to GitHub
+# Container Registry and (optionally) tells the server to pull them.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: meta
+        run: |
+          echo "repo=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Server image (API, worker, migrations)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile.server
+          push: true
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.repo }}-server:${{ steps.meta.outputs.tag }}
+            ghcr.io/${{ steps.meta.outputs.repo }}-server:latest
+          cache-from: type=gha,scope=server
+          cache-to: type=gha,scope=server,mode=max
+      - name: Web image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile.web
+          push: true
+          # Inlined into the browser bundle: set the repository variable PUBLIC_API_URL, e.g. https://api.example.com
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.PUBLIC_API_URL }}
+            NEXT_PUBLIC_SITE_URL=${{ vars.PUBLIC_SITE_URL }}
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.repo }}-web:${{ steps.meta.outputs.tag }}
+            ghcr.io/${{ steps.meta.outputs.repo }}-web:latest
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
+
+  deploy:
+    needs: images
+    # Off until you set the repository variable DEPLOY_ENABLED=true and the three secrets below.
+    if: vars.DEPLOY_ENABLED == 'true' && vars.DEPLOY_METHOD != 'ssm'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Roll out on the server
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER_NAME: ${{ secrets.DEPLOY_USER }}
+          TAG: ${{ needs.images.outputs.tag }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id
+          chmod 600 ~/.ssh/id
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          # compose.yml, Caddyfile and .env already live in /opt/upzy/deploy (see docs/DEPLOYMENT.md).
+          ssh -i ~/.ssh/id "$USER_NAME@$HOST" "cd /opt/upzy/deploy \
+            && sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=$TAG/' .env \
+            && docker compose pull \
+            && docker compose up -d --remove-orphans \
+            && docker image prune -f"
+
+  # AWS without opening SSH to the world: GitHub proves who it is to AWS (OIDC), and AWS Systems Manager runs the
+  # roll-out on the instance. Set DEPLOY_METHOD=ssm, AWS_DEPLOY_ROLE_ARN, AWS_REGION and AWS_INSTANCE_ID (variables).
+  deploy-ssm:
+    needs: images
+    if: vars.DEPLOY_ENABLED == 'true' && vars.DEPLOY_METHOD == 'ssm'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Roll out through SSM
+        env:
+          TAG: ${{ needs.images.outputs.tag }}
+          INSTANCE: ${{ vars.AWS_INSTANCE_ID }}
+        run: |
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE" \
+            --document-name AWS-RunShellScript \
+            --comment "upzy deploy $TAG" \
+            --parameters "commands=[\"cd /opt/upzy/deploy && sudo -u ubuntu sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=$TAG/' .env && sudo -u ubuntu docker compose pull && sudo -u ubuntu docker compose up -d --remove-orphans && sudo -u ubuntu docker image prune -f\"]" \
+            --query Command.CommandId --output text)
+          aws ssm wait command-executed --command-id "$CMD_ID" --instance-id "$INSTANCE"
+          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE" --query '{status:Status,out:StandardOutputContent,err:StandardErrorContent}'

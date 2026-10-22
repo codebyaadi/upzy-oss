@@ -1,0 +1,31 @@
+{
+  "name": "@upzy/db",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "scripts": {
+    "drizzle:generate": "bun --env-file=../../.env --bun run drizzle-kit generate",
+    "drizzle:migrate": "bun --env-file=../../.env --bun run drizzle-kit migrate",
+    "drizzle:studio": "bun --env-file=../../.env --bun run drizzle-kit studio",
+    "migrate": "bun src/migrate.ts",
+    "db:seed": "bun --env-file=../../.env src/seed.ts",
+    "check-types": "tsc --noEmit",
+    "lint": "oxlint"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.4"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:dev",
+    "@types/node": "catalog:dev",
+    "@types/pg": "^8.23.1",
+    "@upzy/typescript-config": "workspace:*",
+    "drizzle-kit": "^0.31.0",
+    "oxlint": "catalog:dev",
+    "pg": "^8.23.1",
+    "typescript": "catalog:dev"
+  }
+}

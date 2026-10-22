@@ -1,0 +1,12 @@
+{
+  "extends": "@upzy/typescript-config/base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2023",
+    "strict": true,
+    "declaration": false,
+    "declarationMap": false,
+    "esModuleInterop": true
+  }
+}

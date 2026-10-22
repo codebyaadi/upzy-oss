@@ -1,0 +1,94 @@
+export type PaidPlan = "starter" | "pro" | "agency";
+export type PlanId = "free" | PaidPlan | "unlimited";
+export type Interval = "monthly" | "yearly";
+
+export interface Limits {
+  monitors: number;
+  /** The shortest check interval allowed, in seconds. */
+  minInterval: number;
+  /** Domains, subdomains and URLs under security scans. */
+  assets: number;
+  statusPages: number;
+  customDomain: boolean;
+}
+
+export interface Plan {
+  id: PlanId;
+  name: string;
+  /** US dollars. Yearly is ten months: two free. */
+  price: Record<Interval, number>;
+  blurb: string;
+  limits: Limits;
+}
+
+/**
+ * What each plan includes. Seats are unlimited on every plan, and AI features run on the customer's own provider
+ * key, so they cost Upzy nothing and are not metered here.
+ */
+export const PLANS: Record<PlanId, Plan> = {
+  free: {
+    id: "free",
+    name: "Free",
+    price: { monthly: 0, yearly: 0 },
+    blurb: "Side projects and trying it out",
+    limits: { monitors: 10, minInterval: 300, assets: 1, statusPages: 1, customDomain: false },
+  },
+  starter: {
+    id: "starter",
+    name: "Starter",
+    price: { monthly: 15, yearly: 150 },
+    blurb: "A freelancer or a single product",
+    limits: { monitors: 30, minInterval: 60, assets: 3, statusPages: 1, customDomain: true },
+  },
+  pro: {
+    id: "pro",
+    name: "Pro",
+    price: { monthly: 39, yearly: 390 },
+    blurb: "A startup or SaaS team",
+    limits: { monitors: 100, minInterval: 60, assets: 10, statusPages: 5, customDomain: true },
+  },
+  agency: {
+    id: "agency",
+    name: "Agency",
+    price: { monthly: 99, yearly: 990 },
+    blurb: "Agencies and teams with many brands",
+    limits: { monitors: 300, minInterval: 60, assets: 30, statusPages: 100, customDomain: true },
+  },
+  // Not for sale: what everyone gets while billing is switched off (self-hosting, early access).
+  unlimited: {
+    id: "unlimited",
+    name: "Unlimited",
+    price: { monthly: 0, yearly: 0 },
+    blurb: "Billing is switched off",
+    limits: {
+      monitors: Infinity,
+      minInterval: 60,
+      assets: Infinity,
+      statusPages: Infinity,
+      customDomain: true,
+    },
+  },
+};
+
+export const PAID_PLANS: PaidPlan[] = ["starter", "pro", "agency"];
+export const TRIAL_PLAN: PlanId = "pro";
+export const TRIAL_DAYS = 14;
+
+export type Resource = "monitors" | "assets" | "statusPages";
+const NOUN: Record<Resource, [string, string]> = {
+  monitors: ["monitor", "monitors"],
+  assets: ["scanned domain or URL", "scanned domains and URLs"],
+  statusPages: ["status page", "status pages"],
+};
+
+/** The refusal shown when creating one more would pass the plan's limit. */
+export function limitMessage(plan: PlanId, resource: Resource, limit: number): string {
+  const [one, many] = NOUN[resource];
+  return `The ${PLANS[plan].name} plan includes ${limit} ${limit === 1 ? one : many}. Upgrade under Settings → Billing to add more.`;
+}
+
+export const intervalMessage = (plan: PlanId, min: number) =>
+  `The ${PLANS[plan].name} plan checks at most every ${min >= 60 ? `${min / 60} minute${min === 60 ? "" : "s"}` : `${min} seconds`}. Upgrade under Settings → Billing for faster checks.`;
+
+export const customDomainMessage = (plan: PlanId) =>
+  `Custom domains aren't included in the ${PLANS[plan].name} plan. Upgrade under Settings → Billing.`;
