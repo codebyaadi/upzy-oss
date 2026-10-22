@@ -26,7 +26,7 @@ Upzy puts both in one place and keeps the output readable:
   <tr>
     <td width="50%" valign="top">
       <h3>Uptime monitoring</h3>
-      HTTP, TCP, DNS and SSL checks, keyword and JSON assertions, multi-step API flows with values passed between steps, encrypted secrets, and heartbeat monitors for cron jobs and workers.
+      HTTP, TCP, DNS and SSL checks, keyword and JSON assertions, multi-step API flows with values passed between steps, encrypted secrets, heartbeat monitors for cron jobs and workers, and a degraded state that flags slow-but-up services without raising an incident.
     </td>
     <td width="50%" valign="top">
       <h3>Attack-surface scanning</h3>
@@ -40,13 +40,13 @@ Upzy puts both in one place and keeps the output readable:
     </td>
     <td valign="top">
       <h3>Alerts that behave</h3>
-      Email, Slack, Discord and HMAC-signed webhooks. One outage is one incident: a message when it opens and another when it recovers. Related incidents on the same site or address are grouped, and every alert still reaches you.
+      Email, Slack, Discord and HMAC-signed webhooks. One outage is one incident: a message when it opens and another when it recovers. Related incidents on the same site or address are grouped, and every alert still reaches you. Scheduled maintenance windows keep planned downtime from paging anyone.
     </td>
   </tr>
   <tr>
     <td valign="top">
       <h3>Public status pages</h3>
-      Per-service status, 90 days of uptime, incident updates, double opt-in email subscribers, custom domains with automatic HTTPS, and an optional security-grade badge. Only the names you choose are shown.
+      Per-service status (including degraded and under maintenance, with upcoming windows announced), 90 days of uptime, incident updates, double opt-in email subscribers, custom domains with automatic HTTPS, and an optional security-grade badge. Only the names you choose are shown.
     </td>
     <td valign="top">
       <h3>AI that explains</h3>

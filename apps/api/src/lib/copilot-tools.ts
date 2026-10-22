@@ -95,15 +95,19 @@ export function copilotTools(db: Db, orgId: string, refs: Refs): ToolSet {
 
     listMonitors: tool({
       description:
-        "List monitors with their current status. Filter by status (up, down, unknown) or workspace. Returns at most 50.",
+        "List monitors with their current status. Filter by status (up, down, degraded = up but slow, unknown) or workspace. Returns at most 50.",
       inputSchema: z.object({
-        status: z.enum(["up", "down", "unknown"]).optional(),
+        status: z.enum(["up", "down", "degraded", "unknown"]).optional(),
         workspaceId: handle.optional(),
         limit: z.number().int().min(1).max(50).default(30),
       }),
       execute: safely(
         "listMonitors",
-        async (a: { status?: "up" | "down" | "unknown"; workspaceId?: string; limit: number }) => {
+        async (a: {
+          status?: "up" | "down" | "degraded" | "unknown";
+          workspaceId?: string;
+          limit: number;
+        }) => {
           const ws = a.workspaceId ? refs.resolve("workspace", a.workspaceId) : undefined;
           if (a.workspaceId && !ws) return NONE("workspace");
           const rows = await db

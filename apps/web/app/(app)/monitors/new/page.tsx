@@ -113,6 +113,9 @@ export default function NewMonitorPage() {
         ...(d.type === "flow" || d.type === "heartbeat" ? {} : { target: d.target.trim() }),
         interval: d.type === "heartbeat" ? 60 : Number(d.every),
         failureThreshold: d.type === "heartbeat" ? 1 : Number(d.threshold),
+        ...(d.type !== "heartbeat" && d.slowMs.trim()
+          ? { latencyThresholdMs: Number(d.slowMs) }
+          : {}),
         active: true,
         config: configOf(d),
         secrets: d.type === "http" || d.type === "flow" ? secretsForCreate(d.secrets) : {},
@@ -276,6 +279,19 @@ export default function NewMonitorPage() {
                     value: String(n),
                     label: `${n} ${n === 1 ? "failure" : "failures"}`,
                   }))}
+                />
+              </Field>
+              <Field
+                label="Degraded when slower than"
+                htmlFor="slowMs"
+                hint="Milliseconds. After three slow checks in a row the monitor shows as degraded; it never raises an incident. Leave empty to turn this off."
+              >
+                <Input
+                  id="slowMs"
+                  inputMode="numeric"
+                  placeholder="e.g. 1500"
+                  value={d.slowMs}
+                  onChange={(e) => set({ slowMs: e.target.value.replace(/[^0-9]/g, "") })}
                 />
               </Field>
             </div>

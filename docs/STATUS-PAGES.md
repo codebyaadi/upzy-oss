@@ -4,7 +4,9 @@ A status page is a public page (`/status/<address>`) that shows whether chosen m
 
 ## What the public sees
 
-Only what you choose to show: the public names you give each component, whether it is up, uptime percentages, and incidents as "<Name> was unavailable" with a start time and a length. Never monitor addresses, ids, incident titles, error text or anything about your organization. A component counts as down only while an incident is open, so one failed check never appears.
+Only what you choose to show: the public names you give each component, whether it is up, uptime percentages, and incidents as "<Name> was unavailable" with a start time and a length. Never monitor addresses, ids, incident titles, error text or anything about your organization. A component counts as down only while an incident is open (or the monitor is failing outside a maintenance window), so one failed check never appears.
+
+Each component shows one of **Operational**, **Degraded performance** (slow for several checks in a row), **Under maintenance** (a scheduled window covers it) or **Unavailable**. The banner follows the worst state: an outage outranks slowness, and slowness outranks planned maintenance. Scheduled maintenance, now or within two weeks, is listed under the banner with its name and times. See [Monitors](MONITORS.md#maintenance-windows) for how windows work and what stays internal.
 
 ## Posting incident updates
 

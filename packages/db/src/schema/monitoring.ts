@@ -36,7 +36,9 @@ export const errorKind = pgEnum("error_kind", [
   "heartbeat",
   "other",
 ]);
-export const checkStatus = pgEnum("check_status", ["up", "down", "unknown"]);
+// "degraded" is a monitor state only (up, but slower than its latency threshold for several checks in a row).
+// A single check result is always up, down or unknown.
+export const checkStatus = pgEnum("check_status", ["up", "down", "unknown", "degraded"]);
 
 export interface MonitorAssertion {
   path: string;
@@ -89,6 +91,8 @@ export const monitors = pgTable(
     /** Consecutive failed checks before the monitor is declared down. */
     failureThreshold: integer("failure_threshold").notNull().default(2),
     consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+    /** Consecutive successful checks slower than `latencyThresholdMs`; three in a row make the monitor "degraded". */
+    consecutiveSlow: integer("consecutive_slow").notNull().default(0),
     /** Named secrets (JSON object, encrypted at rest) the monitor may use as {{secret.NAME}}. Write-only. */
     secretsEncrypted: text("secrets_encrypted"),
     /** Heartbeat monitors: the secret in the ping address, and when the job last checked in or reported failure. */
@@ -187,6 +191,44 @@ export const statusPageMonitors = pgTable(
     position: integer("position").notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.pageId, t.monitorId] })],
+);
+
+/**
+ * A planned period during which expected downtime is not an incident. Checks keep running and are recorded, but no
+ * incident (and so no alert or email) is opened for the covered monitors until it ends. It never closes an incident
+ * that is already open.
+ */
+export const maintenanceWindows = pgTable(
+  "maintenance_windows",
+  {
+    id: id(),
+    workspaceId: workspaceId(),
+    name: text("name").notNull(),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    /** True: every monitor in the workspace. False: only those in `maintenance_window_monitors`. */
+    allMonitors: boolean("all_monitors").notNull().default(false),
+    /** Show the window (its name and times, never internal monitor names) on public status pages it affects. */
+    showOnStatusPage: boolean("show_on_status_page").notNull().default(true),
+    createdAt: createdAt(),
+  },
+  (t) => [index("maintenance_windows_workspace_id_ends_at_idx").on(t.workspaceId, t.endsAt)],
+);
+
+export const maintenanceWindowMonitors = pgTable(
+  "maintenance_window_monitors",
+  {
+    windowId: uuid("window_id")
+      .notNull()
+      .references(() => maintenanceWindows.id, { onDelete: "cascade" }),
+    monitorId: uuid("monitor_id")
+      .notNull()
+      .references(() => monitors.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.windowId, t.monitorId] }),
+    index("maintenance_window_monitors_monitor_id_idx").on(t.monitorId),
+  ],
 );
 
 /**

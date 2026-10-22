@@ -16,6 +16,7 @@ import { emailModule } from "./modules/email";
 import { findingModule } from "./modules/finding";
 import { health } from "./modules/health";
 import { incidentModule } from "./modules/incident";
+import { maintenanceModule } from "./modules/maintenance";
 import { monitorModule } from "./modules/monitor";
 import { onboardingModule } from "./modules/onboarding";
 import { pingModule } from "./modules/ping";
@@ -119,6 +120,7 @@ export const createApp = ({
       .use(channelModule(db, authP, encryptionKey))
       .use(alertRuleModule(db, authP))
       .use(incidentModule(db, authP))
+      .use(maintenanceModule(db, authP))
       .use(assetModule(db, authP, billing))
       .use(onboardingModule(db, authP, billing))
       .use(findingModule(db, authP))

@@ -1,5 +1,6 @@
 import { Logo } from "@/components/logo";
 import { SubscribeForm } from "@/components/status/subscribe-form";
+import { dateTime } from "@/lib/format";
 
 export interface Day {
   date: string;
@@ -9,14 +10,16 @@ export interface Status {
   title: string;
   description: string;
   notice: { text: string; kind: "info" | "maintenance" | "incident" } | null;
-  overall: "operational" | "partial" | "major";
+  overall: "operational" | "degraded" | "maintenance" | "partial" | "major";
   updatedAt: string;
   components: {
     name: string;
-    status: "operational" | "outage" | "paused";
+    status: "operational" | "degraded" | "maintenance" | "outage" | "paused";
     uptime: number | null;
     days: Day[];
   }[];
+  /** Planned maintenance on these services: what is on now and what starts in the next two weeks. */
+  maintenance: { name: string; startsAt: string; endsAt: string; active: boolean }[];
   /** Only when the owner opted in: the letter and when it was measured. */
   security: { grade: "A" | "B" | "C" | "D" | "F"; scannedAt: string } | null;
   incidents: {
@@ -39,6 +42,16 @@ const BANNER = {
     cls: "bg-brand/15 text-foreground border-brand/30",
     dot: "bg-brand",
   },
+  degraded: {
+    label: "Some systems are running slowly",
+    cls: "bg-amber-400/20 text-foreground border-amber-500/40",
+    dot: "bg-amber-500",
+  },
+  maintenance: {
+    label: "Scheduled maintenance in progress",
+    cls: "bg-sky-500/15 text-foreground border-sky-500/30",
+    dot: "bg-sky-500",
+  },
   partial: {
     label: "Some systems are having problems",
     cls: "bg-amber-400/20 text-foreground border-amber-500/40",
@@ -49,6 +62,14 @@ const BANNER = {
     cls: "bg-destructive/15 text-foreground border-destructive/40",
     dot: "bg-destructive",
   },
+} as const;
+
+const COMPONENT = {
+  operational: { label: "Operational", cls: "text-brand" },
+  degraded: { label: "Degraded performance", cls: "text-amber-600 dark:text-amber-400" },
+  maintenance: { label: "Under maintenance", cls: "text-sky-600 dark:text-sky-400" },
+  outage: { label: "Unavailable", cls: "text-destructive" },
+  paused: { label: "Paused", cls: "text-muted-foreground" },
 } as const;
 
 const NOTICE = {
@@ -148,6 +169,32 @@ export function StatusView({
           </div>
         )}
 
+        {s.maintenance.length > 0 && (
+          <section aria-label="Scheduled maintenance" className="space-y-2">
+            <h2 className="text-xl font-bold tracking-tight">Scheduled maintenance</h2>
+            <ul className="bg-card/70 divide-y rounded-3xl border">
+              {s.maintenance.map((w, n) => (
+                <li
+                  key={n}
+                  className="flex flex-wrap items-center justify-between gap-2 px-6 py-4 text-sm"
+                >
+                  <span>
+                    <span className="font-semibold">{w.name}</span>
+                    <span className="text-muted-foreground block text-xs">
+                      {dateTime(w.startsAt)} to {dateTime(w.endsAt)}
+                    </span>
+                  </span>
+                  <span
+                    className={`text-xs font-semibold ${w.active ? "text-sky-600 dark:text-sky-400" : "text-muted-foreground"}`}
+                  >
+                    {w.active ? "In progress" : "Upcoming"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         <section
           aria-label="Components"
           className="bg-card/70 divide-y rounded-3xl border shadow-[var(--shadow-panel)] backdrop-blur"
@@ -159,14 +206,8 @@ export function StatusView({
             <div key={c.name} className="p-6">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h2 className="font-bold tracking-tight">{c.name}</h2>
-                <span
-                  className={`text-sm font-semibold ${c.status === "outage" ? "text-destructive" : c.status === "paused" ? "text-muted-foreground" : "text-brand"}`}
-                >
-                  {c.status === "outage"
-                    ? "Unavailable"
-                    : c.status === "paused"
-                      ? "Paused"
-                      : "Operational"}
+                <span className={`text-sm font-semibold ${COMPONENT[c.status].cls}`}>
+                  {COMPONENT[c.status].label}
                 </span>
               </div>
               <div

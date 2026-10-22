@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 
 import { hasRole } from "@upzy/auth/roles";
 import { decryptJson, encryptJson } from "@upzy/crypto";
-import { schema, type Db } from "@upzy/db";
+import { activeMaintenance, schema, type Db } from "@upzy/db";
 import {
   CreateMonitorSchema,
   UpdateMonitorSchema,
@@ -30,6 +30,9 @@ const StatsQuery = z.object({ range: z.enum(["24h", "7d", "30d"]).default("24h")
 const ChecksQuery = z.object({ limit: z.coerce.number().int().min(1).max(200).default(50) });
 
 const newToken = () => randomBytes(24).toString("base64url");
+
+const maintenanceOf = (w?: { id: string; name: string; endsAt: Date }) =>
+  w ? { id: w.id, name: w.name, endsAt: w.endsAt } : null;
 
 export const monitorModule = (
   db: Db,
@@ -137,11 +140,17 @@ export const monitorModule = (
             )
             .groupBy(monitorChecks.monitorId);
           const byId = new Map(agg.map((a) => [a.monitorId, a]));
+          const inMaintenance = await activeMaintenance(
+            db,
+            rows.map((r) => r.id),
+          );
 
           return rows.map((m) => {
             const a = byId.get(m.id);
             return {
               ...show(m, role),
+              // The window covering this monitor right now, if any.
+              maintenance: maintenanceOf(inMaintenance.get(m.id)),
               // A heartbeat only records changes of state, so a percentage of rows would mislead.
               uptime24h: m.type !== "heartbeat" && a && a.total > 0 ? a.up / a.total : null,
               avgMs24h: a?.avgMs ?? null,
@@ -156,7 +165,10 @@ export const monitorModule = (
         async ({ params, orgId, role }) => {
           const [row] = await db.select().from(monitors).where(owned(orgId, params.id));
           if (!row) throw new HttpError(404, "Monitor not found");
-          return show(row, role);
+          return {
+            ...show(row, role),
+            maintenance: maintenanceOf((await activeMaintenance(db, [row.id])).get(row.id)),
+          };
         },
         { org: true, params: Params },
       )

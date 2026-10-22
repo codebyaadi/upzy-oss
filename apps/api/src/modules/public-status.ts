@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 import { emails, EMAIL_QUEUE } from "@upzy/auth/email";
-import { schema, type Db } from "@upzy/db";
+import { schema, windowsCovering, type Db } from "@upzy/db";
 import { enqueue } from "@upzy/queue";
 import { healthFor } from "@upzy/security";
 import { DomainSchema, SlugSchema } from "@upzy/validator";
@@ -10,7 +10,13 @@ import { Elysia } from "elysia";
 import { z } from "zod";
 
 import { badge, GRADE_TONE } from "../lib/badge";
-import { dailyUptime, overallStatus, overallUptime, type Outage } from "../lib/status";
+import {
+  dailyUptime,
+  overallStatus,
+  overallUptime,
+  type ComponentStatus,
+  type Outage,
+} from "../lib/status";
 import { statusCache as cache } from "../lib/status-cache";
 import { HttpError } from "../plugins/errors";
 
@@ -26,6 +32,7 @@ const {
 
 const DAYS = 90;
 const RECENT_INCIDENT_DAYS = 14;
+const UPCOMING_MAINTENANCE_DAYS = 14;
 const CACHE_MS = 30_000;
 const MAX_SUBSCRIBERS = 2_000;
 // A confirmation email goes to an address someone else typed in, so cap how fast any one page can send them.
@@ -121,15 +128,45 @@ export const publicStatusModule = (
     const outagesFor = (id: string): Outage[] =>
       rows.filter((r) => r.monitorId === id).map((r) => ({ start: r.start, end: r.end }));
 
+    // Planned maintenance that the owner chose to show: it changes what a covered component reports, and the page
+    // lists the windows that are on now or start within the next two weeks. A window kept internal changes nothing
+    // here, so a monitor that is really down still shows as down.
+    const windows = await windowsCovering(
+      db,
+      comps.map((c) => c.monitorId),
+      t,
+      new Date(t.getTime() + UPCOMING_MAINTENANCE_DAYS * 86_400_000),
+    );
+    const shown = (monitorId: string) =>
+      (windows.get(monitorId) ?? []).filter((w) => w.showOnStatusPage);
+    const inMaintenance = (monitorId: string) =>
+      shown(monitorId).some((w) => w.startsAt.getTime() <= t.getTime());
+
     const components = comps.map((c) => {
       const days = dailyUptime(outagesFor(c.monitorId), c.createdAt, t, DAYS);
-      const status = !c.active
-        ? ("paused" as const)
-        : c.lastStatus === "down"
-          ? ("outage" as const)
-          : ("operational" as const);
+      const status: ComponentStatus = !c.active
+        ? "paused"
+        : inMaintenance(c.monitorId)
+          ? "maintenance"
+          : c.lastStatus === "down"
+            ? "outage"
+            : c.lastStatus === "degraded"
+              ? "degraded"
+              : "operational";
       return { name: c.name, status, uptime: overallUptime(days), days };
     });
+
+    const seenWindows = new Map<string, { name: string; startsAt: Date; endsAt: Date }>();
+    for (const c of comps) for (const w of shown(c.monitorId)) seenWindows.set(w.id, w);
+    const maintenance = [...seenWindows.values()]
+      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+      .slice(0, 10)
+      .map((w) => ({
+        name: w.name,
+        startsAt: w.startsAt,
+        endsAt: w.endsAt,
+        active: w.startsAt.getTime() <= t.getTime(),
+      }));
 
     // What a person chose to tell customers about each incident, newest first.
     const posted = rows.length
@@ -187,6 +224,7 @@ export const publicStatusModule = (
       overall: overallStatus(components),
       updatedAt: t,
       components,
+      maintenance,
       incidents: recent,
       security,
     };
@@ -348,14 +386,19 @@ export const publicStatusModule = (
           } else {
             const label = {
               operational: "operational",
-              partial: "degraded",
+              degraded: "degraded",
+              maintenance: "maintenance",
+              partial: "partial outage",
               major: "outage",
             }[body.overall];
-            svg = badge(
-              "status",
-              label,
-              body.overall === "operational" ? "good" : body.overall === "partial" ? "warn" : "bad",
-            );
+            const tone = {
+              operational: "good",
+              degraded: "warn",
+              maintenance: "muted",
+              partial: "warn",
+              major: "bad",
+            } as const;
+            svg = badge("status", label, tone[body.overall]);
           }
           set.headers["content-type"] = "image/svg+xml; charset=utf-8";
           set.headers["cache-control"] = "public, max-age=300, stale-while-revalidate=300";

@@ -1,5 +1,5 @@
 import { decryptJson } from "@upzy/crypto";
-import { schema, type Db } from "@upzy/db";
+import { activeMaintenance, schema, type Db } from "@upzy/db";
 import { runProbe } from "@upzy/probes";
 import { enqueue, work } from "@upzy/queue";
 import { and, eq, ne } from "drizzle-orm";
@@ -67,17 +67,39 @@ export async function handleCheck(
       .from(incidents)
       .where(and(eq(incidents.monitorId, m.id), ne(incidents.status, "resolved")));
 
+    // Up, but slower than the monitor's own latency threshold. Never an incident: it only affects the state shown.
+    const slow =
+      result.status === "up" &&
+      fresh.latencyThresholdMs != null &&
+      result.responseMs != null &&
+      result.responseMs > fresh.latencyThresholdMs;
+    // Only a failure that is about to open an incident needs to know about maintenance.
+    const window =
+      result.status === "down" && !open
+        ? (await activeMaintenance(tx, [m.id], (opts.now ?? (() => new Date()))())).get(m.id)
+        : undefined;
+
     const next = evaluate({
       resultStatus: result.status,
       consecutiveFailures: fresh.consecutiveFailures,
       failureThreshold: fresh.failureThreshold,
       hasOpenIncident: !!open,
+      slow,
+      consecutiveSlow: fresh.consecutiveSlow,
+      inMaintenance: !!window,
     });
 
     await tx
       .update(monitors)
-      .set({ consecutiveFailures: next.consecutiveFailures, lastStatus: next.monitorStatus })
+      .set({
+        consecutiveFailures: next.consecutiveFailures,
+        consecutiveSlow: next.consecutiveSlow,
+        lastStatus: next.monitorStatus,
+      })
       .where(eq(monitors.id, m.id));
+
+    if (next.suppressedByMaintenance)
+      console.log(`[incident] held for ${m.name}: maintenance "${window!.name}" is in progress`);
 
     if (next.incident === "open") {
       const [created] = await tx

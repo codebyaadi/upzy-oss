@@ -45,10 +45,12 @@ export function Panel({ className, ...props }: React.ComponentProps<"section">) 
   );
 }
 
-type Status = "up" | "down" | "unknown" | "paused";
+type Status = "up" | "down" | "degraded" | "maintenance" | "unknown" | "paused";
 const statusMeta: Record<Status, { label: string; dot: string }> = {
   up: { label: "Up", dot: "bg-brand" },
   down: { label: "Down", dot: "bg-destructive" },
+  degraded: { label: "Degraded", dot: "bg-amber-500" },
+  maintenance: { label: "Maintenance", dot: "bg-sky-500" },
   unknown: { label: "Pending", dot: "bg-muted-foreground/50" },
   paused: { label: "Paused", dot: "bg-muted-foreground/50" },
 };

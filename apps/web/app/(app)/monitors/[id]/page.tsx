@@ -51,7 +51,7 @@ export default function MonitorDetailPage() {
   const m = monitor.data;
   if (monitor.error) return <ErrorNote error={monitor.error} />;
   if (!m) return <DetailSkeleton />;
-  const status = !m.active ? "paused" : m.lastStatus;
+  const status = !m.active ? "paused" : m.maintenance ? "maintenance" : m.lastStatus;
 
   const toggle = () =>
     run(
@@ -122,6 +122,20 @@ export default function MonitorDetailPage() {
           </Can>
         </div>
       </div>
+      {m.active && m.maintenance && (
+        <p role="status" className="bg-accent/60 mb-6 rounded-2xl border px-4 py-3 text-sm">
+          <span className="font-semibold">Maintenance: {m.maintenance.name}.</span> Checks keep
+          running, but a failure won&rsquo;t open an incident until {dateTime(m.maintenance.endsAt)}
+          .
+        </p>
+      )}
+      {m.active && !m.maintenance && m.lastStatus === "degraded" && (
+        <p role="status" className="bg-accent/60 mb-6 rounded-2xl border px-4 py-3 text-sm">
+          <span className="font-semibold">Degraded.</span> The last checks succeeded but took longer
+          than {m.latencyThresholdMs} ms. This doesn&rsquo;t raise an incident; it clears on the
+          first fast check.
+        </p>
+      )}
 
       {m.type === "heartbeat" && (
         <HeartbeatPanel

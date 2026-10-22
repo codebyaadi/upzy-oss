@@ -90,4 +90,16 @@ describe("summary", () => {
     expect(overallStatus([{ status: "paused" }, { status: "operational" }])).toBe("operational");
     expect(overallStatus([])).toBe("operational");
   });
+
+  test("slow or planned work is shown when nothing is down, and an outage outranks both", () => {
+    expect(overallStatus([{ status: "operational" }, { status: "degraded" }])).toBe("degraded");
+    expect(overallStatus([{ status: "operational" }, { status: "maintenance" }])).toBe(
+      "maintenance",
+    );
+    expect(overallStatus([{ status: "degraded" }, { status: "maintenance" }])).toBe("degraded");
+    expect(overallStatus([{ status: "maintenance" }, { status: "outage" }])).toBe("partial");
+    expect(overallStatus([{ status: "degraded" }, { status: "outage" }])).toBe("partial");
+    expect(overallStatus([{ status: "maintenance" }, { status: "paused" }])).toBe("maintenance");
+    expect(overallStatus([{ status: "paused" }])).toBe("operational");
+  });
 });

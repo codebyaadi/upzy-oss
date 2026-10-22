@@ -51,7 +51,7 @@ export default function MonitorsPage() {
       {data && data.length > 0 && (
         <ul className="space-y-3">
           {data.map((m) => {
-            const status = !m.active ? "paused" : m.lastStatus;
+            const status = !m.active ? "paused" : m.maintenance ? "maintenance" : m.lastStatus;
             return (
               <li key={m.id}>
                 <Link

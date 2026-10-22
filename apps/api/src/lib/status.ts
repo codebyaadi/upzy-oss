@@ -60,14 +60,19 @@ export function overallUptime(days: Day[]): number | null {
   return Math.round((have.reduce((n, d) => n + d.uptime!, 0) / have.length) * 100) / 100;
 }
 
-export type Overall = "operational" | "partial" | "major";
+export type ComponentStatus = "operational" | "degraded" | "maintenance" | "outage" | "paused";
+export type Overall = "operational" | "degraded" | "maintenance" | "partial" | "major";
 
-/** Everything up is "operational"; some components down is "partial"; all of them down is "major". */
-export function overallStatus(
-  components: { status: "operational" | "outage" | "paused" }[],
-): Overall {
+/**
+ * An outage outranks everything: some components down is "partial", all of the live ones "major". With none down,
+ * slow ("degraded") comes before planned maintenance, and everything else is "operational". Paused components are
+ * ignored.
+ */
+export function overallStatus(components: { status: ComponentStatus }[]): Overall {
   const live = components.filter((c) => c.status !== "paused");
   const down = live.filter((c) => c.status === "outage").length;
-  if (down === 0) return "operational";
-  return down === live.length ? "major" : "partial";
+  if (down > 0) return down === live.length ? "major" : "partial";
+  if (live.some((c) => c.status === "degraded")) return "degraded";
+  if (live.some((c) => c.status === "maintenance")) return "maintenance";
+  return "operational";
 }

@@ -63,6 +63,26 @@ For jobs you can't check from outside: a nightly backup, a queue worker, a cron 
 - A heartbeat appears on status pages, in alerts and in incidents like any other monitor. It has no uptime percentage of its own (only changes of state are recorded), but status page uptime is computed from incidents as for every monitor.
 - Heartbeats are on every plan. They count towards the plan's monitor limit, but the 5-minute minimum interval of the free plan doesn't apply: they are passive.
 
+## Slow responses: the degraded state
+
+Set **Degraded when slower than** (milliseconds) on an HTTP, API flow, TCP, DNS or SSL monitor, from **New monitor** or **Edit**. Leave it empty to turn this off.
+
+- A check that succeeds but takes longer than that is _slow_. After **three slow checks in a row** the monitor shows as **Degraded** (amber), and the first fast check clears it. One slow response is just noise and changes nothing.
+- Degraded never opens an incident and never sends an alert. It exists so you can see a slowdown building before it becomes an outage. A real failure still opens an incident as usual.
+- On a public status page a degraded service reads "Degraded performance", and the banner says "Some systems are running slowly" when nothing is down.
+- A response exactly at the threshold is not slow. Heartbeats have no response time, so they are never degraded.
+
+## Maintenance windows
+
+Planned downtime shouldn't page anyone. Under **Maintenance**, an admin schedules a window: a name, a start and end (at most 14 days long, in your local time), and either every monitor in the workspace or the ones you pick.
+
+- While a window is on, the covered monitors **keep running and every check is recorded**, but a failure doesn't open an incident, so no alert, email or AI analysis is sent. The monitors show **Maintenance** instead of Down.
+- It never hides a problem that already exists: an incident that was open before the window stays open, and its recovery is reported as usual.
+- If a monitor is still failing when the window ends, its incident opens on the next failed check.
+- **End now** finishes a window early (it stays in the history); an upcoming one can be cancelled. Windows from the last 30 days are listed.
+- Only admins can schedule, change or end a window, because it silences alerts. Everyone in the organization can see them, and each change is in the audit log.
+- Public status pages show affected services as "Under maintenance" and announce windows that start within two weeks. The window's **name and times are public**, never the monitors behind it. Turn **Show on status pages** off for an internal window: the page then ignores it, and a service that is really down still shows as down.
+
 ## Limits worth knowing
 
 - Checks run from one location (no multi-region yet).
