@@ -9,6 +9,7 @@ import {
   type Notification,
 } from "@upzy/notify";
 import { enqueue, work, type Job } from "@upzy/queue";
+import { renderHtml } from "@upzy/transactional";
 import { and, eq, isNull, or } from "drizzle-orm";
 import nodemailer from "nodemailer";
 
@@ -39,10 +40,39 @@ export interface NotifierEnv {
   encryptionKey: string;
   appUrl: string;
   smtpUrl?: string;
+  /** Sends through Resend's API instead of SMTP when set. */
+  resendApiKey?: string;
   mailFrom: string;
 }
 
+type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
+
+/** Resend: https://resend.com/docs/api-reference/emails/send-email. The key is the only credential. */
+export function resendSender(apiKey: string, from: string, fetchImpl: Fetch = fetch): EmailSender {
+  return async (m) => {
+    const res = await fetchImpl("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        from,
+        to: [m.to],
+        subject: m.subject,
+        text: m.text,
+        ...(m.html ? { html: m.html } : {}),
+        ...(m.headers ? { headers: m.headers } : {}),
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) {
+      const detail = (await res.text().catch(() => "")).slice(0, 300);
+      throw new Error(`Resend refused the email (${res.status}) ${detail}`.trim());
+    }
+  };
+}
+
+/** Resend when RESEND_API_KEY is set, else SMTP (SMTP_URL), else nothing: email is off. */
 export function makeEmailSender(env: NotifierEnv): EmailSender | undefined {
+  if (env.resendApiKey) return resendSender(env.resendApiKey, env.mailFrom);
   if (!env.smtpUrl) return undefined;
   const transport = nodemailer.createTransport(env.smtpUrl);
   return async (m) => void (await transport.sendMail({ from: env.mailFrom, ...m }));
@@ -261,8 +291,20 @@ export async function handleDeliver(
 
 /** Sends a queued transactional email (invitations, password resets). Throws so the queue retries. */
 export async function handleEmail(email: EmailSender | undefined, payload: Email) {
-  if (!email) throw new Error("Email is not configured on this worker (SMTP_URL)");
-  await email(payload);
+  if (!email)
+    throw new Error("Email is not configured on this worker (RESEND_API_KEY or SMTP_URL)");
+  const { template, ...message } = payload;
+  // The HTML version is rendered here, so the request that queued it never loads the renderer. If rendering fails the
+  // plain-text body still goes out: a broken template must not stop a password reset.
+  let html: string | undefined;
+  if (template) {
+    try {
+      html = await renderHtml(template.name, template.props);
+    } catch (e) {
+      console.error("[email] couldn't render", template.name, e);
+    }
+  }
+  await email({ ...message, ...(html ? { html } : {}) });
   console.log(`[email] sent "${payload.subject}"`);
 }
 

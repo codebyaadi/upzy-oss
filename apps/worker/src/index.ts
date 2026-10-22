@@ -5,6 +5,7 @@ import { z } from "zod";
 import { runAgent } from "./roles/agent";
 import { runCorrelator } from "./roles/correlator";
 import { runDiscovery } from "./roles/discovery";
+import { parseLifecycle, runLifecycle } from "./roles/lifecycle";
 import { runNotifier } from "./roles/notifier";
 import { runProber } from "./roles/prober";
 import { parseRetention, runRetention } from "./roles/retention";
@@ -17,6 +18,7 @@ const Env = z.object({
   UPZY_ENCRYPTION_KEY: z.string().min(1),
   APP_URL: z.string().default("http://localhost:3001"),
   SMTP_URL: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
   MAIL_FROM: z.string().default("Upzy <alerts@upzy.local>"),
 });
 const env = Env.parse(process.env);
@@ -36,6 +38,8 @@ if (roles.has("scheduler")) {
   // Housekeeping rides along with the scheduler, which every deployment runs: old checks and finished jobs are
   // deleted so the database does not grow without bound (CHECK_RETENTION_DAYS, default 90).
   running.push(runRetention(db, controller.signal, parseRetention(process.env)));
+  // Welcome, first-fix and trial-ending emails (LIFECYCLE_EMAILS=off disables them).
+  running.push(runLifecycle(db, controller.signal, parseLifecycle(process.env)));
 }
 if (roles.has("prober"))
   running.push(runProber(db, controller.signal, { encryptionKey: env.UPZY_ENCRYPTION_KEY }));
@@ -64,6 +68,7 @@ if (roles.has("notifier")) {
         encryptionKey: env.UPZY_ENCRYPTION_KEY,
         appUrl: env.APP_URL,
         smtpUrl: env.SMTP_URL,
+        resendApiKey: env.RESEND_API_KEY || undefined,
         mailFrom: env.MAIL_FROM,
       },
       controller.signal,

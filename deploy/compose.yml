@@ -20,6 +20,8 @@ x-server: &server
     # Caddy overwrites X-Forwarded-For, so the API may trust it for rate limits and the audit log.
     TRUST_PROXY: "true"
     SMTP_URL: ${SMTP_URL:-}
+    # Resend (https://resend.com): used instead of SMTP when set. MAIL_FROM must be an address on a verified Resend domain.
+    RESEND_API_KEY: ${RESEND_API_KEY:-}
     # Billing (Dodo Payments). Leave the key and secret empty to run without plans or limits.
     DODO_API_KEY: ${DODO_API_KEY:-}
     DODO_WEBHOOK_SECRET: ${DODO_WEBHOOK_SECRET:-}
@@ -101,6 +103,8 @@ services:
       CHECK_RETENTION_DAYS: ${CHECK_RETENTION_DAYS:-90}
       JOB_RETENTION_DAYS: ${JOB_RETENTION_DAYS:-14}
       FAILED_JOB_RETENTION_DAYS: ${FAILED_JOB_RETENTION_DAYS:-30}
+      # Welcome, first-fix and trial-ending emails (need SMTP_URL). Set to off to send none.
+      LIFECYCLE_EMAILS: ${LIFECYCLE_EMAILS:-on}
     depends_on:
       migrate: { condition: service_completed_successfully }
     networks: [db, edge]

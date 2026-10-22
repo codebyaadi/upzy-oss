@@ -84,6 +84,8 @@ export interface DodoClient {
     metadata: Record<string, string>;
   }): Promise<{ url: string; sessionId: string }>;
   createPortal(customerId: string, returnUrl?: string): Promise<{ url: string }>;
+  /** Ends a subscription right away (no further charges). */
+  cancelSubscription(subscriptionId: string): Promise<void>;
 }
 
 export class DodoError extends Error {}
@@ -135,6 +137,12 @@ export function createDodoClient(
         { method: "POST" },
       );
       return { url: r.link };
+    },
+    async cancelSubscription(subscriptionId) {
+      await call(`/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "cancelled" }),
+      });
     },
   };
 }

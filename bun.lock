@@ -23,6 +23,7 @@
         "@upzy/notify": "workspace:*",
         "@upzy/queue": "workspace:*",
         "@upzy/security": "workspace:*",
+        "@upzy/transactional": "workspace:*",
         "@upzy/validator": "workspace:*",
         "ai": "^7.0.142",
         "drizzle-orm": "^0.45.4",
@@ -80,6 +81,7 @@
         "@upzy/probes": "workspace:*",
         "@upzy/queue": "workspace:*",
         "@upzy/security": "workspace:*",
+        "@upzy/transactional": "workspace:*",
         "drizzle-orm": "^0.45.4",
         "nodemailer": "^10.1.1",
         "zod": "catalog:",
@@ -123,6 +125,7 @@
       "dependencies": {
         "@upzy/db": "workspace:*",
         "@upzy/queue": "workspace:*",
+        "@upzy/transactional": "workspace:*",
         "better-auth": "^1.4.18",
         "drizzle-orm": "^0.45.4",
       },
@@ -242,6 +245,7 @@
       },
       "devDependencies": {
         "@react-email/preview-server": "5.2.10",
+        "@types/bun": "catalog:dev",
         "@types/node": "catalog:dev",
         "@types/react": "catalog:ui",
         "@types/react-dom": "catalog:ui",

@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.tsx",
+    "./templates": "./src/templates.ts"
   },
   "scripts": {
     "dev": "email dev --dir ./src/emails --port 3002",
     "check-types": "tsc --noEmit",
-    "lint": "oxlint"
+    "lint": "oxlint",
+    "test": "bun test"
   },
   "dependencies": {
     "@react-email/components": "1.0.12",
@@ -17,6 +19,7 @@
   },
   "devDependencies": {
     "@react-email/preview-server": "5.2.10",
+    "@types/bun": "catalog:dev",
     "@types/node": "catalog:dev",
     "@types/react": "catalog:ui",
     "@types/react-dom": "catalog:ui",

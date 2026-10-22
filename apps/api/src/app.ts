@@ -5,6 +5,7 @@ import type { Db } from "@upzy/db";
 import { Elysia } from "elysia";
 
 import { createBilling, type BillingDeps } from "./lib/billing";
+import { accountModule } from "./modules/account";
 import { aiModule, type AiDeps } from "./modules/ai";
 import { alertRuleModule } from "./modules/alert-rule";
 import { assetModule } from "./modules/asset";
@@ -46,6 +47,10 @@ export interface AppDeps {
   /** Where audit entries go. Defaults to the audit_logs table. */
   auditSink?: AuditSink;
   rateLimit?: Partial<Pick<RateLimitOptions, "rules" | "now" | "trustProxy">>;
+  /** Cancels a paid subscription at the payment provider when an organization is deleted. Absent without billing. */
+  cancelSubscription?: (providerSubscriptionId: string) => Promise<void>;
+  /** Signs the unsubscribe links in lifecycle emails. Defaults to BETTER_AUTH_SECRET. */
+  authSecret?: string;
 }
 
 /** Used when the server was started without AI wiring: every AI route answers "off"/"unavailable". */
@@ -84,6 +89,8 @@ export const createApp = ({
   billing: billingDeps,
   apiOrigin: apiOriginDep,
   rateLimit: rateOptions,
+  cancelSubscription,
+  authSecret,
 }: AppDeps) => {
   const apiOrigin = (
     apiOriginDep ??
@@ -120,6 +127,12 @@ export const createApp = ({
       .use(channelModule(db, authP, encryptionKey))
       .use(alertRuleModule(db, authP))
       .use(incidentModule(db, authP))
+      .use(
+        accountModule(db, authP, {
+          cancelSubscription,
+          secret: authSecret ?? process.env.BETTER_AUTH_SECRET ?? "",
+        }),
+      )
       .use(maintenanceModule(db, authP))
       .use(assetModule(db, authP, billing))
       .use(onboardingModule(db, authP, billing))

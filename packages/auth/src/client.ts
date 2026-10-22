@@ -24,6 +24,8 @@ export const {
   signOut,
   useSession,
   organization,
+  useActiveOrganization,
+  deleteUser,
   requestPasswordReset,
   resetPassword,
   sendVerificationEmail,

@@ -148,9 +148,10 @@ export default function Privacy() {
             security findings are part of your account data and are kept as described above.
           </li>
           <li>
-            When you ask us to delete your account or organization, we delete it from the live
-            service within 30 days. Encrypted backups are replaced on a 30-day cycle, so copies
-            disappear from them within about 30 further days.
+            When you delete your account or an organization in the app (Account page), it is removed
+            from the live service straight away; if you ask us to do it instead, within 30 days.
+            Encrypted backups are replaced on a 30-day cycle, so copies disappear from them within
+            about 30 further days.
           </li>
           <li>
             Status page subscribers: an address that never confirms is removed after a week, and an
@@ -187,9 +188,9 @@ export default function Privacy() {
           You can ask us to give you a copy of your personal data, correct it, delete it, restrict
           or object to how we use it, or move it to another service, and you can withdraw consent at
           any time. Most of this you can do yourself in the app (edit your details, remove monitors
-          and assets, unsubscribe from a status page). For anything else, or to delete your account,
-          write to <Contact />. If you think we have handled your data wrongly you can also complain
-          to your local data protection authority.
+          and assets, unsubscribe from a status page, delete your account or an organization you own
+          under Account). For anything else, write to <Contact />. If you think we have handled your
+          data wrongly you can also complain to your local data protection authority.
         </P>
         <P>
           <strong>If you subscribed to a status page:</strong> the organization running that page

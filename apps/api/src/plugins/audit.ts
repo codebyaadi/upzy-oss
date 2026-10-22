@@ -85,11 +85,10 @@ export const audit = (sink: AuditSink, opts: { trustProxy?: boolean } = {}) => {
       // Resolved by the `org` macro. Requests that never authenticated are not attributable.
       const { orgId, user } = ctx as unknown as { orgId?: string; user?: { id: string } };
       if (!orgId) return;
-      record(
-        ctx,
-        { organizationId: orgId, userId: user?.id ?? null },
-        typeof ctx.set.status === "number" ? ctx.set.status : 200,
-      );
+      const status = typeof ctx.set.status === "number" ? ctx.set.status : 200;
+      // A deleted organization takes its audit log with it, so there is nowhere to record its own deletion.
+      if (ctx.request.method === "DELETE" && ctx.route === "/organization" && status < 300) return;
+      record(ctx, { organizationId: orgId, userId: user?.id ?? null }, status);
     })
     .onError({ as: "global" }, (ctx) => {
       // Role refusals never reach onAfterResponse with an org context, so log them here.

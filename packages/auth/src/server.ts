@@ -1,4 +1,4 @@
-import type { Db } from "@upzy/db";
+import { deleteOrganization, ownedOrganizations, type Db } from "@upzy/db";
 import * as schema from "@upzy/db/schema";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -22,7 +22,15 @@ export const authProviders = (env: Record<string, string | undefined> = process.
   github: githubCredentials(env) !== null,
 });
 
-export const createAuth = (db: Db, opts: { sendEmail?: SendEmail; signup?: SignupPolicy } = {}) => {
+export const createAuth = (
+  db: Db,
+  opts: {
+    sendEmail?: SendEmail;
+    signup?: SignupPolicy;
+    /** Cancels a paid subscription at the payment provider, so deleting an account never leaves one billing. */
+    cancelSubscription?: (providerSubscriptionId: string) => Promise<void>;
+  } = {},
+) => {
   const signup = opts.signup ?? parseSignupPolicy();
   const webOrigin = process.env.WEB_ORIGIN || "http://localhost:3001";
   const sendEmail = opts.sendEmail ?? queueEmail(db);
@@ -56,6 +64,36 @@ export const createAuth = (db: Db, opts: { sendEmail?: SendEmail; signup?: Signu
     // GitHub-verified emails link to an existing account with the same address; new accounts still pass the
     // sign-up policy below.
     socialProviders: github ? { github } : {},
+    // Self-service account deletion (password, or a recent sign-in for GitHub-only accounts). A user who is the only
+    // owner of an organization that still has other people in it must hand it over first; organizations they were
+    // alone in are deleted with them, after their subscription is cancelled.
+    user: {
+      deleteUser: {
+        enabled: true,
+        beforeDelete: async (user) => {
+          const owned = await ownedOrganizations(db, user.id);
+          const stuck = owned.filter((o) => o.otherMembers > 0 && o.otherOwners === 0);
+          if (stuck.length)
+            throw new APIError("BAD_REQUEST", {
+              message: `You are the only owner of ${stuck.map((o) => o.name).join(", ")}, and other people belong to it. Make someone else an owner, or remove them, before deleting your account.`,
+            });
+          for (const o of owned.filter((o) => o.otherMembers === 0))
+            await deleteOrganization(db, o.id, {
+              cancelSubscription: opts.cancelSubscription,
+            }).catch((e) => {
+              console.error("[account] organization delete failed", o.id, e);
+              throw new APIError("BAD_GATEWAY", {
+                message: `The subscription for ${o.name} couldn't be cancelled, so nothing was deleted. Try again in a moment.`,
+              });
+            });
+        },
+        afterDelete: async (user) => {
+          await sendEmail(emails.accountDeleted({ to: user.email, name: user.name })).catch(
+            () => {},
+          );
+        },
+      },
+    },
     // Soft verification: the email is sent on sign-up and the dashboard nudges, but sign-in is not blocked.
     emailVerification: {
       sendOnSignUp: true,

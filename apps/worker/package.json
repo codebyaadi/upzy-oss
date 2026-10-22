@@ -19,6 +19,7 @@
     "@upzy/probes": "workspace:*",
     "@upzy/queue": "workspace:*",
     "@upzy/security": "workspace:*",
+    "@upzy/transactional": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "nodemailer": "^10.1.1",
     "zod": "catalog:"

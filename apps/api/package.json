@@ -24,6 +24,7 @@
     "@upzy/notify": "workspace:*",
     "@upzy/queue": "workspace:*",
     "@upzy/security": "workspace:*",
+    "@upzy/transactional": "workspace:*",
     "@upzy/validator": "workspace:*",
     "ai": "^7.0.142",
     "drizzle-orm": "^0.45.4",

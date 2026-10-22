@@ -1,15 +1,17 @@
 # Email
 
-Upzy sends email for invitations, password resets, the weekly digest and email alerts. It uses any SMTP server, set with two lines in `deploy/.env` on the server:
+Upzy sends email for invitations, password resets, the weekly digest and email alerts. Messages are branded HTML with a plain-text fallback (the templates live in `packages/transactional`). The easiest way to send them is Resend: verify your domain at resend.com, create an API key and set two lines in `deploy/.env` on the server:
 
 ```
-SMTP_URL=smtps://USER:PASSWORD@HOST:465
+RESEND_API_KEY=re_...
 MAIL_FROM="Upzy <alerts@your-domain.com>"
 ```
 
+Any SMTP server works too (`SMTP_URL=smtps://USER:PASSWORD@HOST:465`); it is used only when `RESEND_API_KEY` is empty.
+
 After editing, restart the two containers that read them: `docker compose up -d api worker`. Then open **Account menu → Email settings** in the app and press **Send a test email to me**. It shows where mail is going (never the password) and whether the server could send.
 
-If `SMTP_URL` is empty, nothing is sent and the app keeps working: webhook, Slack and Discord alerts are unaffected, and sign-up isn't blocked by an unconfirmed address.
+If neither is set, nothing is sent and the app keeps working: webhook, Slack and Discord alerts are unaffected, and sign-up isn't blocked by an unconfirmed address.
 
 ## Which provider
 
@@ -39,14 +41,24 @@ Proton Mail only offers SMTP on its business plans, or through the Proton Bridge
 2. SMTP & API → SMTP: copy the login and generate an SMTP key.
 3. `SMTP_URL=smtps://LOGIN:SMTP_KEY@smtp-relay.brevo.com:465`, `MAIL_FROM="Upzy <alerts@your-domain.com>"`.
 
-### Resend
+### Resend (recommended)
 
 1. Add and verify your domain (it gives you the DNS records), then create an API key.
-2. `SMTP_URL=smtps://resend:API_KEY@smtp.resend.com:465`, `MAIL_FROM="Upzy <alerts@your-domain.com>"`.
+2. `RESEND_API_KEY=re_...`, `MAIL_FROM="Upzy <alerts@your-domain.com>"`. (Resend's SMTP also works: `SMTP_URL=smtps://resend:API_KEY@smtp.resend.com:465`.)
 
 ### Amazon SES
 
 In the SES console: verify the domain, request production access (the sandbox only sends to verified addresses), create SMTP credentials, and URL-encode the user and password.
+
+## Emails beyond alerts
+
+Besides alerts, invitations and password resets, the worker sends three product emails, once each:
+
+- **Welcome**, a few minutes after sign-up.
+- **Your first fix**, two days after sign-up, naming the most serious open finding and how to fix it. Only if there is one and nothing has been fixed yet.
+- **Trial ending**, three days before an organization's trial ends, to its owners and admins.
+
+Each has a one-click unsubscribe link (also a switch on the Account page), and nobody who has unsubscribed gets another. Set `LIFECYCLE_EMAILS=off` to send none. Only accounts created in the last week are considered, so switching this on never emails old accounts. They need `SMTP_URL` like every other email.
 
 ## DNS records for your own domain
 

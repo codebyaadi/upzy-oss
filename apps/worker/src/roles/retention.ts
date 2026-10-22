@@ -141,7 +141,7 @@ export async function purgeOldRows(
 }
 
 /** Resolves after `ms`, or as soon as the worker is told to stop, so shutdown never waits out a long sleep. */
-const sleepUnlessAborted = (ms: number, signal: AbortSignal) =>
+export const sleepUnlessAborted = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve) => {
     if (signal.aborted) return resolve();
     const done = () => {

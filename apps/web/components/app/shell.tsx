@@ -127,6 +127,7 @@ function AccountMenuContent({
       {can("admin") && (
         <DropdownMenuItem onClick={() => router.push("/audit")}>Audit log</DropdownMenuItem>
       )}
+      <DropdownMenuItem onClick={() => router.push("/settings/account")}>Account</DropdownMenuItem>
       <DropdownMenuItem onClick={() => router.push("/settings/ai")}>AI settings</DropdownMenuItem>
       {can("admin") && (
         <DropdownMenuItem onClick={() => router.push("/settings/billing")}>

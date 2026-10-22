@@ -4,8 +4,11 @@
     "baseUrl": ".",
     "paths": {
       "@upzy/transactional/*": ["./src/*"]
-    }
+    },
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["bun"]
   },
-  "include": ["src"],
+  "include": ["src", "test"],
   "exclude": ["node_modules", "dist"]
 }

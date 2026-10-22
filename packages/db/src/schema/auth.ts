@@ -18,6 +18,8 @@ export const users = pgTable(
     email: text("email").notNull(),
     emailVerified: boolean("email_verified").notNull().default(false),
     image: text("image"),
+    /** Product emails beyond account mail (welcome, tips, trial reminders). Off once the user unsubscribes. */
+    lifecycleEmails: boolean("lifecycle_emails").notNull().default(true),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

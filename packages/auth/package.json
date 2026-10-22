@@ -9,6 +9,7 @@
     "./types": "./src/types.ts",
     "./roles": "./src/roles.ts",
     "./email": "./src/email.ts",
+    "./unsubscribe": "./src/unsubscribe.ts",
     "./signup": "./src/signup.ts"
   },
   "scripts": {
@@ -20,6 +21,7 @@
   "dependencies": {
     "@upzy/db": "workspace:*",
     "@upzy/queue": "workspace:*",
+    "@upzy/transactional": "workspace:*",
     "better-auth": "^1.4.18",
     "drizzle-orm": "^0.45.4"
   },

@@ -1,5 +1,6 @@
 import { createDbStores, createGateway, createModelDiscovery, loadAiConfig } from "@upzy/ai";
 import { createAuth } from "@upzy/auth/server";
+import { createDodoClient, loadBillingConfig } from "@upzy/billing";
 import { createDb } from "@upzy/db";
 
 import { createApp } from "./app";
@@ -7,7 +8,10 @@ import { loadEnv } from "./env";
 
 const env = loadEnv();
 const db = createDb(env.DATABASE_URL);
-const auth = createAuth(db);
+const billingConfig = loadBillingConfig(process.env);
+const dodo = billingConfig.enabled ? createDodoClient(billingConfig) : undefined;
+const cancelSubscription = dodo ? (id: string) => dodo.cancelSubscription(id) : undefined;
+const auth = createAuth(db, { cancelSubscription });
 
 const aiConfig = loadAiConfig(process.env);
 const aiStores = createDbStores(db, {
@@ -28,5 +32,6 @@ createApp({
   webOrigin: env.WEB_ORIGIN,
   encryptionKey: env.UPZY_ENCRYPTION_KEY,
   ai,
+  cancelSubscription,
 }).listen(env.PORT);
 console.log(`api listening on :${env.PORT}`);

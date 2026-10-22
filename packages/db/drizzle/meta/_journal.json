@@ -183,6 +183,13 @@
       "when": 1792701284816,
       "tag": "0025_degraded_and_maintenance",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792702598258,
+      "tag": "0026_lifecycle_emails",
+      "breakpoints": true
     }
   ]
 }

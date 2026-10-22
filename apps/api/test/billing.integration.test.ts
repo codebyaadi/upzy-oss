@@ -44,6 +44,7 @@ run("billing (postgres)", () => {
       portals.push(id);
       return { url: `https://portal.example/${id}` };
     },
+    cancelSubscription: async () => {},
   };
   const baseApp = (billing: object) =>
     createApp({

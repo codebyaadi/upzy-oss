@@ -14,6 +14,15 @@ const Params = z.object({ id: z.uuid() });
 
 /** Where mail is going, without the credentials in the URL. */
 function describeSmtp(env: Record<string, string | undefined>) {
+  // Resend wins over SMTP when both are set, as in the worker.
+  if (env.RESEND_API_KEY?.trim())
+    return {
+      configured: true as const,
+      host: "api.resend.com (Resend)",
+      port: 443,
+      secure: true,
+      from: env.MAIL_FROM ?? null,
+    };
   const raw = env.SMTP_URL;
   if (!raw) return { configured: false as const };
   try {
@@ -52,7 +61,10 @@ export const emailModule = (
       "/test",
       async ({ user }) => {
         if (!describeSmtp(env).configured)
-          throw new HttpError(409, "Email isn't set up on this server yet: SMTP_URL is empty.");
+          throw new HttpError(
+            409,
+            "Email isn't set up on this server yet: set RESEND_API_KEY or SMTP_URL.",
+          );
         const email: Email = {
           to: user.email,
           subject: "Upzy test email",
