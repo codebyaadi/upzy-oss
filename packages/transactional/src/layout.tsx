@@ -112,7 +112,14 @@ function Brand() {
               width={36}
               height={36}
               alt="Upzy"
-              style={{ display: "block", borderRadius: "10px" }}
+              style={{
+                display: "block",
+                width: "36px",
+                height: "36px",
+                maxWidth: "36px",
+                border: 0,
+                borderRadius: "10px",
+              }}
             />
           </td>
           <td style={{ verticalAlign: "middle" }}>
