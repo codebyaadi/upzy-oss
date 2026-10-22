@@ -8,6 +8,8 @@ export interface Day {
 }
 export interface Status {
   title: string;
+  /** The customer's own logo (Agency plan), already filtered by the server to what the plan allows. */
+  branding?: { logoUrl: string | null };
   description: string;
   notice: { text: string; kind: "info" | "maintenance" | "incident" } | null;
   overall: "operational" | "degraded" | "maintenance" | "partial" | "major";
@@ -128,6 +130,15 @@ export function StatusView({
     <div className="ambient min-h-svh px-4 py-12">
       <main className="mx-auto max-w-3xl space-y-6">
         <header>
+          {s.branding?.logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element -- an arbitrary customer-supplied address
+            <img
+              src={s.branding.logoUrl}
+              alt=""
+              referrerPolicy="no-referrer"
+              className="mb-5 max-h-14 w-auto max-w-[14rem] object-contain"
+            />
+          )}
           <h1 className="text-3xl font-extrabold tracking-tighter text-balance sm:text-4xl">
             {s.title}
           </h1>

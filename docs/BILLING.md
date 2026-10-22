@@ -14,8 +14,11 @@ Defined in `packages/billing/src/plans.ts`, used by the server to enforce limits
 | Scanned domains/URLs                 | 1     | 3       | 10    | 30     |
 | Status pages                         | 1     | 1       | 5     | 100    |
 | Custom domain on a status page       | no    | yes     | yes   | yes    |
+| Your client's logo on a status page  | no    | no      | no    | yes    |
 
 Team members are unlimited on every plan, and AI features run on the customer's own provider key, so neither is metered. Every new organization gets a **14-day Pro trial with no card**; the clock starts the first time its billing is looked at (so existing organizations get 14 days from when you switch billing on). After it, they are on Free.
+
+A custom logo is checked when the page is shown, so an organization that leaves the Agency plan loses the logo from its pages (the setting is kept, and the logo comes back if it returns). Setting or changing the logo needs the plan; removing it never does. "Powered by Upzy" stays on every page on every plan.
 
 Limits only stop **creating** more (a monitor, a scanned asset, a status page, a faster interval, a custom domain). Existing monitors keep running, alerts keep sending and public status pages stay up, whatever the plan or payment state. A billing problem can never silence an outage alert.
 

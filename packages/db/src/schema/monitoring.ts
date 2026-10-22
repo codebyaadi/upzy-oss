@@ -164,6 +164,8 @@ export const statusPages = pgTable(
     securityAssetId: uuid("security_asset_id").references(() => assets.id, {
       onDelete: "set null",
     }),
+    /** Agency plan: the customer's own logo above the title (an https image URL). Upzy's credit always stays. */
+    logoUrl: text("logo_url"),
     createdAt: createdAt(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

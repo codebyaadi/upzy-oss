@@ -25,6 +25,7 @@ const EMPTY: StatusPageDraft = {
   components: [],
   customDomain: "",
   securityAssetId: "",
+  logoUrl: "",
 };
 
 interface PageRow {
@@ -189,6 +190,7 @@ export default function StatusPagesPage() {
         const common = {
           ...draft,
           securityAssetId: draft.securityAssetId || null,
+          logoUrl: draft.logoUrl || undefined,
         };
         if (id === "new")
           await unwrap(
@@ -203,6 +205,7 @@ export default function StatusPagesPage() {
             api["status-page"]({ id }).patch({
               ...common,
               customDomain: draft.customDomain || null,
+              logoUrl: draft.logoUrl || null,
             }),
           );
         await pages.mutate();
@@ -298,6 +301,7 @@ export default function StatusPagesPage() {
                 })),
                 customDomain: p.customDomain ?? "",
                 securityAssetId: p.securityAssetId ?? "",
+                logoUrl: p.logoUrl ?? "",
               }}
               monitors={monitorList}
               assets={assetList}

@@ -10,6 +10,7 @@ import { Elysia } from "elysia";
 import { z } from "zod";
 
 import { badge, GRADE_TONE } from "../lib/badge";
+import type { Billing } from "../lib/billing";
 import {
   dailyUptime,
   overallStatus,
@@ -28,6 +29,7 @@ const {
   incidents,
   incidentUpdates,
   assets,
+  workspaces,
 } = schema;
 
 const DAYS = 90;
@@ -49,7 +51,11 @@ const SubscribeBody = z.object({ email: z.email().max(254) });
  */
 export const publicStatusModule = (
   db: Db,
-  { webOrigin, now = () => new Date() }: { webOrigin: string; now?: () => Date },
+  {
+    webOrigin,
+    now = () => new Date(),
+    billing,
+  }: { webOrigin: string; now?: () => Date; billing?: Billing },
 ) => {
   const bySlug = async (slug: string) =>
     (
@@ -217,9 +223,21 @@ export const publicStatusModule = (
       if (a?.lastScanAt && health) security = { grade: health.grade, scannedAt: a.lastScanAt };
     }
 
+    // The logo shows only while the plan includes it, so a downgrade takes it down. Upzy's own credit is never optional.
+    let logoUrl: string | null = null;
+    if (page.logoUrl) {
+      const [owner] = await db
+        .select({ orgId: workspaces.orgId })
+        .from(workspaces)
+        .where(eq(workspaces.id, page.workspaceId));
+      if (owner && (!billing || (await billing.customLogoAllowed(db, owner.orgId))))
+        logoUrl = page.logoUrl;
+    }
+
     return {
       title: page.title,
       description: page.description,
+      branding: { logoUrl },
       notice: page.notice ? { text: page.notice, kind: page.noticeKind } : null,
       overall: overallStatus(components),
       updatedAt: t,

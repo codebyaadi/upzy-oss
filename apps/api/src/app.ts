@@ -20,6 +20,7 @@ import { incidentModule } from "./modules/incident";
 import { maintenanceModule } from "./modules/maintenance";
 import { monitorModule } from "./modules/monitor";
 import { onboardingModule } from "./modules/onboarding";
+import { overviewModule } from "./modules/overview";
 import { pingModule } from "./modules/ping";
 import { publicStatusModule } from "./modules/public-status";
 import { statusPageModule, type StatusDns } from "./modules/status-page";
@@ -127,6 +128,7 @@ export const createApp = ({
       // Public: lets the login and sign-up pages show only the sign-in methods this server has configured.
       .get("/auth-providers", () => authProviders())
       .use(workspaceModule(db, authP))
+      .use(overviewModule(db, authP))
       .use(monitorModule(db, authP, billing, { encryptionKey, apiOrigin }))
       .use(channelModule(db, authP, encryptionKey))
       .use(alertRuleModule(db, authP))
@@ -143,7 +145,7 @@ export const createApp = ({
       .use(findingModule(db, authP))
       .use(discoveryModule(db, authP, billing))
       .use(auditModule(db, authP))
-      .use(publicStatusModule(db, { webOrigin }))
+      .use(publicStatusModule(db, { webOrigin, billing }))
       .use(pingModule(db))
       .use(toolsModule(tools))
       .use(statusPageModule(db, authP, billing, { dns: statusDns }))

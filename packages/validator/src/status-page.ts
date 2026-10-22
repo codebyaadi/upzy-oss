@@ -40,6 +40,21 @@ export const DomainSchema = z
   .toLowerCase()
   .refine(isPublicHostname, "Enter a domain like status.example.com (no https://, no path)");
 
+/** The logo is loaded by visitors' browsers from this address, so it must be a plain https URL. */
+const LogoUrlValue = z
+  .string()
+  .trim()
+  .max(500)
+  .refine((v) => {
+    try {
+      const u = new URL(v);
+      return u.protocol === "https:" && !u.username && !u.password;
+    } catch {
+      return false;
+    }
+  }, "Enter the full https:// address of an image");
+const LogoUrl = z.preprocess((v) => (v === "" ? undefined : v), LogoUrlValue.optional());
+
 // Plain text only: it is shown to the public, and rendered as text (never as HTML).
 const text = (max: number) => z.string().trim().max(max);
 
@@ -76,6 +91,7 @@ export const CreateStatusPageSchema = z.object({
   notice: Fields.notice.default(""),
   noticeKind: Fields.noticeKind.default("info"),
   securityAssetId: Fields.securityAssetId.default(null),
+  logoUrl: LogoUrl.optional(),
   components: Fields.components,
   // The form sends "" for "no custom domain".
   customDomain: z.preprocess((v) => (v === "" ? undefined : v), DomainSchema.optional()),
@@ -89,6 +105,7 @@ export const UpdateStatusPageSchema = z
   .object({
     ...Fields,
     customDomain: z.preprocess((v) => (v === "" ? null : v), DomainSchema.nullable()),
+    logoUrl: z.preprocess((v) => (v === "" ? null : v), LogoUrlValue.nullable()),
   })
   .partial();
 export type StatusPageInput = z.infer<typeof CreateStatusPageSchema>;

@@ -10,6 +10,8 @@ export interface Limits {
   assets: number;
   statusPages: number;
   customDomain: boolean;
+  /** The customer's own logo on status pages (Upzy's credit always stays). */
+  customLogo: boolean;
 }
 
 export interface Plan {
@@ -31,28 +33,56 @@ export const PLANS: Record<PlanId, Plan> = {
     name: "Free",
     price: { monthly: 0, yearly: 0 },
     blurb: "Side projects and trying it out",
-    limits: { monitors: 10, minInterval: 300, assets: 1, statusPages: 1, customDomain: false },
+    limits: {
+      monitors: 10,
+      minInterval: 300,
+      assets: 1,
+      statusPages: 1,
+      customDomain: false,
+      customLogo: false,
+    },
   },
   starter: {
     id: "starter",
     name: "Starter",
     price: { monthly: 15, yearly: 150 },
     blurb: "A freelancer or a single product",
-    limits: { monitors: 30, minInterval: 60, assets: 3, statusPages: 1, customDomain: true },
+    limits: {
+      monitors: 30,
+      minInterval: 60,
+      assets: 3,
+      statusPages: 1,
+      customDomain: true,
+      customLogo: false,
+    },
   },
   pro: {
     id: "pro",
     name: "Pro",
     price: { monthly: 39, yearly: 390 },
     blurb: "A startup or SaaS team",
-    limits: { monitors: 100, minInterval: 60, assets: 10, statusPages: 5, customDomain: true },
+    limits: {
+      monitors: 100,
+      minInterval: 60,
+      assets: 10,
+      statusPages: 5,
+      customDomain: true,
+      customLogo: false,
+    },
   },
   agency: {
     id: "agency",
     name: "Agency",
     price: { monthly: 99, yearly: 990 },
     blurb: "Agencies and teams with many brands",
-    limits: { monitors: 300, minInterval: 60, assets: 30, statusPages: 100, customDomain: true },
+    limits: {
+      monitors: 300,
+      minInterval: 60,
+      assets: 30,
+      statusPages: 100,
+      customDomain: true,
+      customLogo: true,
+    },
   },
   // Not for sale: what everyone gets while billing is switched off (self-hosting, early access).
   unlimited: {
@@ -66,6 +96,7 @@ export const PLANS: Record<PlanId, Plan> = {
       assets: Infinity,
       statusPages: Infinity,
       customDomain: true,
+      customLogo: true,
     },
   },
 };
@@ -92,3 +123,6 @@ export const intervalMessage = (plan: PlanId, min: number) =>
 
 export const customDomainMessage = (plan: PlanId) =>
   `Custom domains aren't included in the ${PLANS[plan].name} plan. Upgrade under Settings → Billing.`;
+
+export const customLogoMessage = (plan: PlanId) =>
+  `A custom logo on status pages isn't included in the ${PLANS[plan].name} plan. Upgrade to Agency under Settings → Billing.`;

@@ -21,6 +21,8 @@ export interface StatusPageDraft {
   customDomain: string;
   /** The asset whose security grade the public page shows. Empty means none. */
   securityAssetId: string;
+  /** An https image address. Empty means none. */
+  logoUrl: string;
 }
 
 const AREA =
@@ -284,6 +286,21 @@ export function StatusPageForm({
               { value: "none", label: "Don't show a grade" },
               ...assets.map((a) => ({ value: a.id, label: a.value })),
             ]}
+          />
+        </Field>
+
+        <Field
+          label="Your client's logo (Agency plan, optional)"
+          htmlFor="sp-logo"
+          hint="The full https:// address of an image. It appears above the page title; “Powered by Upzy” stays at the bottom."
+        >
+          <Input
+            id="sp-logo"
+            type="url"
+            value={d.logoUrl}
+            maxLength={500}
+            placeholder="https://client.com/logo.png"
+            onChange={(e) => setD((x) => ({ ...x, logoUrl: e.target.value.trim() }))}
           />
         </Field>
 

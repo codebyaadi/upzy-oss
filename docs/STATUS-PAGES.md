@@ -25,6 +25,10 @@ Published pages also get two embeddable badges (**Show embeddable badges** on th
 
 Badges are images served by Upzy, cached for five minutes, built from a fixed set of words (never your page's text), and link back to the page. An unpublished page has no badge.
 
+## Your client's logo (Agency plan)
+
+On the Agency plan, edit a page and set a **Logo**: the full `https://` address of an image. It shows above the page title. "Powered by Upzy" stays at the bottom of every page. Emails that go to the page's subscribers come from Upzy.
+
 ## Email subscribers
 
 Every public status page has a "Get updates by email" form (also on custom domains). A visitor enters an address, gets a confirmation email, and only after pressing **Confirm subscription** on the page it links to do they receive anything. Every email carries a one-click unsubscribe link (and a `List-Unsubscribe` header).

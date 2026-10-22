@@ -187,6 +187,7 @@ export const statusPageModule = (
         await checkSecurityAsset(body.workspaceId, body.securityAssetId);
         await billing.assertCanCreate(db, orgId, "statusPages");
         if (body.customDomain) await billing.assertCustomDomain(db, orgId);
+        if (body.logoUrl) await billing.assertCustomLogo(db, orgId);
         const { components, ...page } = body;
         try {
           const created = await db.transaction(async (tx) => {
@@ -212,6 +213,9 @@ export const statusPageModule = (
         const { components, customDomain, ...fields } = body;
         if (components) await checkComponents(page.workspaceId, components);
         await checkSecurityAsset(page.workspaceId, fields.securityAssetId);
+        // Only setting or changing the logo needs the plan: saving other edits on a page that already has one never does.
+        if (fields.logoUrl && fields.logoUrl !== page.logoUrl)
+          await billing.assertCustomLogo(db, orgId);
         // A new (or cleared) domain starts over: fresh proof to publish, nothing verified.
         const domain: Partial<typeof statusPages.$inferInsert> = {};
         if (customDomain !== undefined && customDomain !== page.customDomain) {

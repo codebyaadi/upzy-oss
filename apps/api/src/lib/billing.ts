@@ -6,6 +6,7 @@ import {
   entitlement,
   intervalMessage,
   limitMessage,
+  customLogoMessage,
   loadBillingConfig,
   type BillingConfig,
   type DodoClient,
@@ -105,6 +106,17 @@ export function createBilling(deps: BillingDeps = { config: loadBillingConfig(pr
       throw new HttpError(402, customDomainMessage(ent.plan));
   }
 
+  async function assertCustomLogo(db: Db, orgId: string) {
+    const { ent } = await entitlementFor(db, orgId);
+    if (!PLANS[ent.plan].limits.customLogo) throw new HttpError(402, customLogoMessage(ent.plan));
+  }
+
+  /** Whether this organization's plan currently includes a custom logo (checked when the page is shown, so a downgrade takes effect). */
+  async function customLogoAllowed(db: Db, orgId: string) {
+    const { ent } = await entitlementFor(db, orgId);
+    return PLANS[ent.plan].limits.customLogo;
+  }
+
   return {
     config,
     dodo,
@@ -115,6 +127,8 @@ export function createBilling(deps: BillingDeps = { config: loadBillingConfig(pr
     assertCanCreate,
     assertInterval,
     assertCustomDomain,
+    assertCustomLogo,
+    customLogoAllowed,
     workspaces,
   };
 }

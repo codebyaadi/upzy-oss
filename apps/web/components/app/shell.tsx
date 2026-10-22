@@ -5,6 +5,7 @@ import {
   AiChat02Icon,
   Alert02Icon,
   AuditIcon,
+  DashboardSquare01Icon,
   Calendar03Icon,
   Globe02Icon,
   Menu01Icon,
@@ -48,6 +49,10 @@ import { useWorkspace } from "./workspace";
 
 type NavItem = { href: Route; label: string; icon: IconSvgElement; min?: Role };
 const groups: { label: string; items: NavItem[] }[] = [
+  {
+    label: "Overview",
+    items: [{ href: "/overview", label: "All workspaces", icon: DashboardSquare01Icon }],
+  },
   {
     label: "Reliability",
     items: [
