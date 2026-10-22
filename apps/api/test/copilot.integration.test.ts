@@ -129,7 +129,8 @@ run("ops copilot (postgres)", () => {
 
   /** Any member of the organization: the copilot sees what its caller may see. */
   const memberOf = async (orgId: string) =>
-    (await db.select().from(schema.members).where(eq(schema.members.organizationId, orgId)))[0]!.userId;
+    (await db.select().from(schema.members).where(eq(schema.members.organizationId, orgId)))[0]!
+      .userId;
   const call = async (orgId: string, name: string, input: object, refs = new Refs()) => {
     const tools = copilotTools(db, orgId, await memberOf(orgId), refs) as Record<
       string,
