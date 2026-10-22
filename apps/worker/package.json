@@ -20,7 +20,7 @@
     "@upzy/queue": "workspace:*",
     "@upzy/security": "workspace:*",
     "drizzle-orm": "^0.45.4",
-    "nodemailer": "^10.1.1",
+    "nodemailer": "^10.1.7",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -28,7 +28,7 @@
     "@types/node": "catalog:dev",
     "@types/nodemailer": "^7.0.0",
     "@upzy/typescript-config": "workspace:*",
-    "ai": "^7.0.142",
+    "ai": "^7.0.144",
     "oxlint": "catalog:dev",
     "typescript": "catalog:dev"
   }

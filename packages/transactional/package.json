@@ -22,7 +22,7 @@
     "@types/react-dom": "catalog:ui",
     "@upzy/typescript-config": "workspace:*",
     "oxlint": "catalog:dev",
-    "react-email": "6.11.1",
+    "react-email": "6.11.3",
     "typescript": "catalog:dev"
   }
 }
