@@ -72,3 +72,16 @@ export {
   type Snippet,
 } from "./fixes";
 export { healthFor, recordHealth, healthHistory, hostOfTarget } from "./health-db";
+export {
+  runTool,
+  normalizeHost,
+  scoreOf,
+  isToolId,
+  TOOL_IDS,
+  ToolInputError,
+  ToolUnreachableError,
+  type ToolId,
+  type ToolResult,
+  type ToolFinding,
+  type ToolFact,
+} from "./tools";

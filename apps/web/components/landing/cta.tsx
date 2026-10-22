@@ -18,6 +18,9 @@ export function Cta() {
       <footer className="text-muted-foreground mx-auto mt-16 flex max-w-5xl flex-col items-center justify-between gap-5 text-xs sm:flex-row">
         <Logo />
         <nav aria-label="Legal" className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+          <Link href="/tools" className="hover:text-foreground underline underline-offset-4">
+            Free tools
+          </Link>
           <Link href="/pricing" className="hover:text-foreground underline underline-offset-4">
             Pricing
           </Link>

@@ -18,7 +18,13 @@ export interface Health {
   cappedBy: "critical" | "high" | "medium" | null;
 }
 
-const PENALTY: Record<Severity, number> = { critical: 40, high: 25, medium: 12, low: 5, info: 0 };
+export const PENALTY: Record<Severity, number> = {
+  critical: 40,
+  high: 25,
+  medium: 12,
+  low: 5,
+  info: 0,
+};
 const WEIGHT: Record<Category, number> = { security: 50, availability: 20, email: 20, hygiene: 10 };
 
 /** Expiry, CAA and version banners are housekeeping; everything else about the site itself is security. */

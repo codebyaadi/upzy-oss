@@ -23,6 +23,7 @@ import { onboardingModule } from "./modules/onboarding";
 import { pingModule } from "./modules/ping";
 import { publicStatusModule } from "./modules/public-status";
 import { statusPageModule, type StatusDns } from "./modules/status-page";
+import { toolsModule, type ToolsDeps } from "./modules/tools";
 import { workspaceModule } from "./modules/workspace";
 import { audit, dbAuditSink, type AuditSink } from "./plugins/audit";
 import { authPlugin } from "./plugins/auth";
@@ -49,6 +50,8 @@ export interface AppDeps {
   rateLimit?: Partial<Pick<RateLimitOptions, "rules" | "now" | "trustProxy">>;
   /** Cancels a paid subscription at the payment provider when an organization is deleted. Absent without billing. */
   cancelSubscription?: (providerSubscriptionId: string) => Promise<void>;
+  /** Overrides for the free checkers (tests). */
+  tools?: ToolsDeps;
   /** Signs the unsubscribe links in lifecycle emails. Defaults to BETTER_AUTH_SECRET. */
   authSecret?: string;
 }
@@ -91,6 +94,7 @@ export const createApp = ({
   rateLimit: rateOptions,
   cancelSubscription,
   authSecret,
+  tools,
 }: AppDeps) => {
   const apiOrigin = (
     apiOriginDep ??
@@ -141,6 +145,7 @@ export const createApp = ({
       .use(auditModule(db, authP))
       .use(publicStatusModule(db, { webOrigin }))
       .use(pingModule(db))
+      .use(toolsModule(tools))
       .use(statusPageModule(db, authP, billing, { dns: statusDns }))
       .use(billingModule(db, authP, billing, webOrigin))
       .use(emailModule(db, authP))

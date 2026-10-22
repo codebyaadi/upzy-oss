@@ -149,6 +149,8 @@ Billing is off by default. With no payment keys set, nothing is limited, which i
 - **Account and organization deletion are self-service** (Account page in the user menu). An owner deletes an organization by typing its name; a paid subscription is cancelled first. Deleting an account removes the organizations you were alone in, and is refused while you are the only owner of one with other people in it.
 - **Lifecycle emails** (welcome, a nudge to fix your first finding, a heads-up before a trial ends) go out through the same SMTP settings. Each has a one-click unsubscribe, and `LIFECYCLE_EMAILS=off` stops them.
 
+- **Free checkers** at `/tools` (security headers, SSL certificate, SPF and DMARC) need no account. They run the same checks as the scanner, are limited to 10 a minute per address, and cache each site for ten minutes. Only public sites can be checked.
+
 ## Security
 
 Found a vulnerability? Please report it privately. See [SECURITY.md](SECURITY.md).

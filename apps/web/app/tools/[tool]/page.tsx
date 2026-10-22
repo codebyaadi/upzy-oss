@@ -1,0 +1,108 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
+
+import { Checker } from "@/components/tools/checker";
+import { ToolsShell } from "@/components/tools/shell";
+import { TOOLS, toolBySlug } from "@/lib/tools";
+
+export const dynamicParams = false;
+export const generateStaticParams = () => TOOLS.map((t) => ({ tool: t.slug }));
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ tool: string }>;
+}): Promise<Metadata> {
+  const tool = toolBySlug((await params).tool);
+  if (!tool) return {};
+  return {
+    title: tool.title,
+    description: tool.description,
+    alternates: { canonical: `/tools/${tool.slug}` },
+  };
+}
+
+export default async function ToolPage({ params }: { params: Promise<{ tool: string }> }) {
+  const tool = toolBySlug((await params).tool);
+  if (!tool) notFound();
+  const others = TOOLS.filter((t) => t.id !== tool.id);
+
+  const faqData = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: tool.faq.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  }).replace(/</g, "\\u003c");
+
+  return (
+    <ToolsShell>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqData }} />
+      <header className="max-w-2xl">
+        <Link
+          href="/tools"
+          className="text-muted-foreground hover:text-foreground text-sm font-semibold"
+        >
+          ← Free tools
+        </Link>
+        <h1 className="mt-4 text-4xl font-extrabold tracking-tighter text-balance sm:text-5xl">
+          {tool.title}
+        </h1>
+        <p className="text-muted-foreground mt-4 text-lg text-pretty">{tool.summary}</p>
+      </header>
+
+      <div className="mt-8 max-w-3xl">
+        <Suspense fallback={null}>
+          <Checker tool={tool} />
+        </Suspense>
+      </div>
+
+      <section className="mt-16 max-w-3xl">
+        <h2 className="text-2xl font-extrabold tracking-tighter">What it checks</h2>
+        <ul className="mt-4 list-disc space-y-2 pl-5 leading-relaxed">
+          {tool.checks.map((c) => (
+            <li key={c}>{c}</li>
+          ))}
+        </ul>
+        <p className="text-muted-foreground mt-4 text-sm">
+          It makes a few ordinary requests to the domain you enter, the same ones a browser or mail
+          server would, and stores nothing about you or the result. Only public sites can be
+          checked.
+        </p>
+      </section>
+
+      <section className="mt-12 max-w-3xl">
+        <h2 className="text-2xl font-extrabold tracking-tighter">Questions</h2>
+        <dl className="mt-4 space-y-5">
+          {tool.faq.map((f) => (
+            <div key={f.q}>
+              <dt className="font-bold">{f.q}</dt>
+              <dd className="text-muted-foreground mt-1 leading-relaxed">{f.a}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <section className="mt-12 max-w-3xl">
+        <h2 className="text-2xl font-extrabold tracking-tighter">More free checks</h2>
+        <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+          {others.map((t) => (
+            <li key={t.id}>
+              <Link
+                href={`/tools/${t.slug}`}
+                className="bg-card/70 hover:border-foreground/30 block rounded-3xl border p-5 transition-colors"
+              >
+                <span className="font-bold">{t.name}</span>
+                <span className="text-muted-foreground mt-1 block text-sm">{t.summary}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </ToolsShell>
+  );
+}
