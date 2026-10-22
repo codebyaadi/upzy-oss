@@ -22,6 +22,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3001"),
   title,
   description,
+  authors: [{ name: "Aditya Rajbhar", url: "https://github.com/codebyaadi" }],
+  creator: "Aditya Rajbhar",
   openGraph: { title, description, type: "website", siteName: "Upzy" },
   twitter: { card: "summary_large_image", title, description },
 };
