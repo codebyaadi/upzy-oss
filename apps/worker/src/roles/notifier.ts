@@ -7,6 +7,7 @@ import {
   type EmailSender,
   type IncidentEventName,
   type Notification,
+  type Poster,
 } from "@upzy/notify";
 import { enqueue, work, type Job } from "@upzy/queue";
 import { renderHtml, type TemplateName } from "@upzy/transactional";
@@ -43,6 +44,8 @@ export interface NotifierEnv {
   /** Sends through Resend's API instead of SMTP when set. */
   resendApiKey?: string;
   mailFrom: string;
+  /** Sends a webhook-style request. Tests inject a fake; by default it is the SSRF-guarded client. */
+  post?: Poster;
 }
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
@@ -246,7 +249,7 @@ export async function handleDeliver(
   if (!loaded) return;
   const { channel, notification } = loaded;
 
-  const record = async (status: "sent" | "failed", error?: string) => {
+  const record = async (status: "sent" | "failed", error?: string, externalId?: string) => {
     // The unique index is an expression index (coalesce), which Drizzle can't target in
     // ON CONFLICT, so insert-if-absent and then set the final state.
     await db
@@ -259,11 +262,12 @@ export async function handleDeliver(
         occurrence,
         status,
         error,
+        externalId,
       })
       .onConflictDoNothing();
     await db
       .update(d)
-      .set({ status, error: error ?? null })
+      .set({ status, error: error ?? null, ...(externalId ? { externalId } : {}) })
       .where(
         and(
           eq(subjectColumn, subjectId),
@@ -279,8 +283,28 @@ export async function handleDeliver(
       kind: channel.kind,
       ...decryptJson<object>(channel.configEncrypted, env.encryptionKey),
     } as ChannelConfig;
-    await deliver(config, notification, { email });
-    await record("sent");
+    // A recovery needs to find what the outage created at the provider (a GitHub issue to close).
+    let previousExternalId: string | undefined;
+    if (payload.event === "incident.resolved" && "incidentId" in payload) {
+      const [opened] = await db
+        .select({ externalId: d.externalId })
+        .from(d)
+        .where(
+          and(
+            eq(d.incidentId, payload.incidentId),
+            eq(d.channelId, payload.channelId),
+            eq(d.event, "incident.opened"),
+            eq(d.status, "sent"),
+          ),
+        );
+      previousExternalId = opened?.externalId ?? undefined;
+    }
+    const result = await deliver(config, notification, {
+      email,
+      previousExternalId,
+      post: env.post,
+    });
+    await record("sent", undefined, result?.externalId);
     console.log(`[notifier] ${payload.event} -> ${channel.name} (${channel.kind})`);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

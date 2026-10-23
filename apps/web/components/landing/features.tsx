@@ -35,7 +35,7 @@ const features: { icon: IconSvgElement; title: string; body: string; live?: bool
     icon: Notification03Icon,
     title: "Alerts that behave",
     live: true,
-    body: "Email, Slack, Discord and signed webhooks. One outage is one incident, with a message when it opens and another when it recovers.",
+    body: "Email, Slack, Discord, Microsoft Teams, PagerDuty, Opsgenie, GitHub issues and signed webhooks. One outage is one incident, with a message when it opens and another when it recovers.",
   },
   {
     icon: Layers01Icon,

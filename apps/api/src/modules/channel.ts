@@ -56,6 +56,22 @@ export const channelModule = (db: Db, authP: AuthPlugin, encryptionKey: string) 
             config = { url: body.url, secret };
             summary = host(body.url);
             break;
+          case "teams":
+            config = { url: body.url };
+            summary = host(body.url);
+            break;
+          case "pagerduty":
+            config = { routingKey: body.routingKey };
+            summary = `Events API v2, key ending ${body.routingKey.slice(-4)}`;
+            break;
+          case "opsgenie":
+            config = { apiKey: body.apiKey, region: body.region };
+            summary = `${body.region.toUpperCase()} region, key ending ${body.apiKey.slice(-4)}`;
+            break;
+          case "github":
+            config = { repo: body.repo, token: body.token };
+            summary = body.repo;
+            break;
           default:
             config = { url: body.url };
             summary = host(body.url);

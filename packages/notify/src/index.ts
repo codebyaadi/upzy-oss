@@ -2,6 +2,10 @@ import { signWebhook } from "@upzy/crypto";
 import { safeFetch } from "@upzy/probes";
 import { compose, type TemplateProps } from "@upzy/transactional/templates";
 
+import { github, opsgenie, pagerduty, teams, type DeliverResult } from "./providers";
+
+export { isTest, type DeliverResult } from "./providers";
+
 export type IncidentEventName = "incident.opened" | "incident.resolved";
 export type NotifyEventName = IncidentEventName | "finding.opened";
 
@@ -27,18 +31,23 @@ export type ChannelConfig =
   | { kind: "email"; to: string }
   | { kind: "slack"; url: string }
   | { kind: "discord"; url: string }
-  | { kind: "webhook"; url: string; secret: string };
+  | { kind: "webhook"; url: string; secret: string }
+  | { kind: "teams"; url: string }
+  | { kind: "pagerduty"; routingKey: string }
+  | { kind: "opsgenie"; apiKey: string; region: "us" | "eu" }
+  | { kind: "github"; repo: string; token: string };
 
 /** Sends an HTTP POST. Defaults to the SSRF-guarded client; tests inject their own. */
 export type Poster = (
   url: string,
   body: string,
   headers: Record<string, string>,
-) => Promise<{ status: number }>;
+  method?: "POST" | "PATCH",
+) => Promise<{ status: number; body?: string }>;
 
-export const guardedPost: Poster = (url, body, headers) =>
+export const guardedPost: Poster = (url, body, headers, method = "POST") =>
   safeFetch(url, {
-    method: "POST",
+    method,
     body,
     headers: { "content-type": "application/json", ...headers },
     timeoutMs: 10_000,
@@ -98,12 +107,15 @@ function assertOk(status: number, what: string) {
   if (status < 200 || status >= 300) throw new Error(`${what} responded with HTTP ${status}`);
 }
 
-/** Delivers a notification. Throws on failure so the queue retries. */
+/**
+ * Delivers a notification. Throws on failure so the queue retries. Returns what the provider created, if the recovery
+ * will need to find it again (a GitHub issue number); `previousExternalId` is that value, passed back on recovery.
+ */
 export async function deliver(
   config: ChannelConfig,
   n: Notification,
-  deps: { post?: Poster; email?: EmailSender } = {},
-): Promise<void> {
+  deps: { post?: Poster; email?: EmailSender; previousExternalId?: string } = {},
+): Promise<DeliverResult | void> {
   const post = deps.post ?? guardedPost;
   switch (config.kind) {
     case "slack": {
@@ -138,6 +150,14 @@ export async function deliver(
       });
       return assertOk(res.status, "Webhook endpoint");
     }
+    case "teams":
+      return teams(config.url, n, post);
+    case "pagerduty":
+      return pagerduty(config.routingKey, n, post);
+    case "opsgenie":
+      return opsgenie(config, n, post);
+    case "github":
+      return github(config, n, { send: post, previousExternalId: deps.previousExternalId });
     case "email": {
       if (!deps.email) throw new Error("Email is not configured on this worker (SMTP_URL)");
       await deps.email(compose("alert", config.to, { subject: subjectFor(n), ...alertFor(n) }));

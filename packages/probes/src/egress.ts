@@ -123,7 +123,7 @@ export async function resolvePublic(hostname: string): Promise<ResolvedTarget> {
 }
 
 export interface SafeFetchOptions {
-  method?: "GET" | "HEAD" | "POST";
+  method?: "GET" | "HEAD" | "POST" | "PATCH";
   /** Request body, POST only. Redirects are never followed for POST. */
   body?: string;
   timeoutMs?: number;
@@ -185,7 +185,7 @@ export async function safeFetch(
     const sent = performance.now();
     const res = await fetch(pinned, {
       method,
-      body: method === "POST" ? requestBody : undefined,
+      body: method === "POST" || method === "PATCH" ? requestBody : undefined,
       redirect: "manual",
       signal: deadline,
       headers: { host: url.host, "user-agent": botUserAgent(), ...headers },
@@ -194,7 +194,12 @@ export async function safeFetch(
     const ttfbMs = Math.round(performance.now() - sent);
 
     const location = res.headers.get("location");
-    if (method !== "POST" && res.status >= 300 && res.status < 400 && location) {
+    if (
+      (method === "GET" || method === "HEAD") &&
+      res.status >= 300 &&
+      res.status < 400 &&
+      location
+    ) {
       await res.body?.cancel();
       url = new URL(location, url);
       continue;

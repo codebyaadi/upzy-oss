@@ -63,7 +63,16 @@ export const incidents = pgTable(
   ],
 );
 
-export const channelKind = pgEnum("channel_kind", ["email", "slack", "discord", "webhook"]);
+export const channelKind = pgEnum("channel_kind", [
+  "email",
+  "slack",
+  "discord",
+  "webhook",
+  "teams",
+  "pagerduty",
+  "opsgenie",
+  "github",
+]);
 
 /** Where notifications go. `configEncrypted` holds the target (address / URL / signing secret). */
 export const notificationChannels = pgTable("notification_channels", {
@@ -121,6 +130,8 @@ export const notificationDeliveries = pgTable(
     occurrence: text("occurrence").notNull().default(""),
     status: deliveryStatus("status").notNull(),
     error: text("error"),
+    /** What the provider made of it (a GitHub issue number), so the recovery can find the same one. */
+    externalId: text("external_id"),
     createdAt: createdAt(),
   },
   (t) => [

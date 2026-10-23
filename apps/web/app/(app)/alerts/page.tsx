@@ -18,36 +18,123 @@ import { api } from "@/lib/api";
 import { useAction } from "@/lib/use-action";
 import { unwrap, useApi } from "@/lib/use-api";
 
-const KINDS = {
+interface FieldSpec {
+  /** The property the API expects. */
+  key: string;
+  label: string;
+  placeholder: string;
+  type: "text" | "email" | "url" | "password";
+  hint?: string;
+}
+
+const KINDS: Record<
+  "email" | "slack" | "discord" | "teams" | "pagerduty" | "opsgenie" | "github" | "webhook",
+  { label: string; fields: FieldSpec[] }
+> = {
   email: {
     label: "Email",
-    field: "to",
-    placeholder: "oncall@example.com",
-    type: "email",
-    hint: "Sent from Upzy's mailer.",
+    fields: [
+      {
+        key: "to",
+        label: "Address",
+        placeholder: "oncall@example.com",
+        type: "email",
+        hint: "Sent from Upzy's mailer.",
+      },
+    ],
   },
   slack: {
     label: "Slack",
-    field: "url",
-    placeholder: "https://hooks.slack.com/services/…",
-    type: "url",
-    hint: "An incoming webhook URL.",
+    fields: [
+      {
+        key: "url",
+        label: "URL",
+        placeholder: "https://hooks.slack.com/services/…",
+        type: "url",
+        hint: "An incoming webhook URL.",
+      },
+    ],
   },
   discord: {
     label: "Discord",
-    field: "url",
-    placeholder: "https://discord.com/api/webhooks/…",
-    type: "url",
-    hint: "A channel webhook URL.",
+    fields: [
+      {
+        key: "url",
+        label: "URL",
+        placeholder: "https://discord.com/api/webhooks/…",
+        type: "url",
+        hint: "A channel webhook URL.",
+      },
+    ],
+  },
+  teams: {
+    label: "Microsoft Teams",
+    fields: [
+      {
+        key: "url",
+        label: "Webhook URL",
+        placeholder: "https://…webhook.office.com/… or …logic.azure.com/…",
+        type: "url",
+        hint: 'From a Teams Workflows "Post to a channel when a webhook request is received", or an incoming webhook.',
+      },
+    ],
+  },
+  pagerduty: {
+    label: "PagerDuty",
+    fields: [
+      {
+        key: "routingKey",
+        label: "Integration key",
+        placeholder: "32 letters and digits",
+        type: "password",
+        hint: "From a service's Integrations tab: add the Events API v2 integration and copy its Integration Key.",
+      },
+    ],
+  },
+  opsgenie: {
+    label: "Opsgenie",
+    fields: [
+      {
+        key: "apiKey",
+        label: "API key",
+        placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+        type: "password",
+        hint: "From a team's Integrations tab: add an API integration and copy its key.",
+      },
+    ],
+  },
+  github: {
+    label: "GitHub issues",
+    fields: [
+      {
+        key: "repo",
+        label: "Repository",
+        placeholder: "owner/name",
+        type: "text",
+        hint: "Issues are opened here, and closed when the monitor recovers.",
+      },
+      {
+        key: "token",
+        label: "Access token",
+        placeholder: "github_pat_…",
+        type: "password",
+        hint: "A fine-grained token with Issues: read and write on that one repository.",
+      },
+    ],
   },
   webhook: {
     label: "Webhook",
-    field: "url",
-    placeholder: "https://example.com/hooks/upzy",
-    type: "url",
-    hint: "We POST JSON, signed with an HMAC secret.",
+    fields: [
+      {
+        key: "url",
+        label: "URL",
+        placeholder: "https://example.com/hooks/upzy",
+        type: "url",
+        hint: "We POST JSON, signed with an HMAC secret.",
+      },
+    ],
   },
-} as const;
+};
 type Kind = keyof typeof KINDS;
 
 type EventName = "incident.opened" | "incident.resolved" | "finding.opened";
@@ -63,6 +150,7 @@ export default function AlertsPage() {
   const confirm = useConfirm();
   const { run, isPending } = useAction();
   const [kind, setKind] = useState<Kind>("email");
+  const [region, setRegion] = useState<"us" | "eu">("us");
   const [secret, setSecret] = useState<{ name: string; value: string } | null>(null);
 
   const channels = useApi(`channels:${workspace.id}`, () =>
@@ -87,12 +175,14 @@ export default function AlertsPage() {
     const created = await run(
       "create-channel",
       async () => {
-        const spec = KINDS[kind];
-        const body = {
+        const body: Record<string, string> = {
           workspaceId: workspace.id,
           name: String(f.get("name")).trim(),
           kind,
-          [spec.field]: String(f.get("target")).trim(),
+          ...Object.fromEntries(
+            KINDS[kind].fields.map((x) => [x.key, String(f.get(x.key) ?? "").trim()]),
+          ),
+          ...(kind === "opsgenie" ? { region } : {}),
         };
         const c = (await unwrap(api.channel.post(body as never))) as {
           id: string;
@@ -380,20 +470,36 @@ export default function AlertsPage() {
               <Field label="Name" htmlFor="name">
                 <Input id="name" name="name" placeholder="On-call" required maxLength={100} />
               </Field>
-              <Field
-                label={kind === "email" ? "Address" : "URL"}
-                htmlFor="target"
-                hint={KINDS[kind].hint}
-              >
-                <Input
-                  id="target"
-                  name="target"
-                  key={kind}
-                  type={KINDS[kind].type}
-                  placeholder={KINDS[kind].placeholder}
-                  required
-                />
-              </Field>
+              {KINDS[kind].fields.map((x) => (
+                <Field
+                  key={`${kind}-${x.key}`}
+                  label={x.label}
+                  htmlFor={`f-${x.key}`}
+                  hint={x.hint}
+                >
+                  <Input
+                    id={`f-${x.key}`}
+                    name={x.key}
+                    type={x.type}
+                    placeholder={x.placeholder}
+                    autoComplete="off"
+                    required
+                  />
+                </Field>
+              ))}
+              {kind === "opsgenie" && (
+                <Field label="Region" htmlFor="region" hint="Where your Opsgenie account lives.">
+                  <SelectField
+                    id="region"
+                    value={region}
+                    onValueChange={setRegion}
+                    options={[
+                      { value: "us", label: "United States (api.opsgenie.com)" },
+                      { value: "eu", label: "Europe (api.eu.opsgenie.com)" },
+                    ]}
+                  />
+                </Field>
+              )}
               <Button type="submit" className="w-full" loading={isPending("create-channel")}>
                 Add channel
               </Button>
