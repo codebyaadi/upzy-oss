@@ -8,6 +8,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  vector,
 } from "drizzle-orm/pg-core";
 
 import { createdAt, id, jsonb } from "./_helpers";
@@ -61,6 +62,24 @@ export const incidents = pgTable(
       .on(t.monitorId)
       .where(sql`${t.status} <> 'resolved'`),
   ],
+);
+
+/**
+ * A vector describing how an incident failed, for finding earlier incidents that look alike. One per incident;
+ * `model` says which embedder made it, so vectors from a replaced one are ignored until recomputed.
+ */
+export const incidentEmbeddings = pgTable(
+  "incident_embeddings",
+  {
+    incidentId: uuid("incident_id")
+      .primaryKey()
+      .references(() => incidents.id, { onDelete: "cascade" }),
+    workspaceId: workspaceId(),
+    model: text("model").notNull(),
+    embedding: vector("embedding", { dimensions: 384 }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("incident_embeddings_workspace_idx").on(t.workspaceId, t.model)],
 );
 
 export const channelKind = pgEnum("channel_kind", [

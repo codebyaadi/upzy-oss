@@ -1,4 +1,4 @@
-import { schema, type Db } from "@upzy/db";
+import { schema, similarIncidents, type Db } from "@upzy/db";
 import { enqueue } from "@upzy/queue";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { Elysia } from "elysia";
@@ -155,6 +155,18 @@ export const incidentModule = (db: Db, authP: AuthPlugin) => {
           return { status: "pending" as const };
         },
         { org: "member", params: Params },
+      )
+      .get(
+        "/:id/similar",
+        async ({ user, params, orgId }) => {
+          const [found] = await db
+            .select({ id: incidents.id })
+            .from(incidents)
+            .where(owned(orgId, user.id, params.id));
+          if (!found) throw new HttpError(404, "Incident not found");
+          return similarIncidents(db, found.id);
+        },
+        { org: true, params: Params },
       )
       .get(
         "/:id",

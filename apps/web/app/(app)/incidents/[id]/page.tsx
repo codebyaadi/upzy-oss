@@ -9,6 +9,7 @@ import { AiTriage } from "@/components/app/ai-triage";
 import { Can } from "@/components/app/can";
 import { IncidentUpdates } from "@/components/app/incident-updates";
 import { Postmortem } from "@/components/app/postmortem";
+import { SimilarIncidents } from "@/components/app/similar-incidents";
 import {
   PageTitle,
   BackLink,
@@ -128,6 +129,8 @@ export default function IncidentDetailPage() {
         hasMonitor={!!i.monitor}
         onChanged={() => mutate()}
       />
+
+      <SimilarIncidents incidentId={i.id} />
 
       {i.monitor && (
         <IncidentUpdates incidentId={i.id} updates={i.updates} onChanged={() => mutate()} />

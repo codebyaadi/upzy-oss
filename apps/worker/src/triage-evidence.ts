@@ -1,5 +1,5 @@
 import type { EvidenceItem } from "@upzy/ai";
-import { schema, type Db } from "@upzy/db";
+import { schema, similarIncidents, type Db } from "@upzy/db";
 import { resolvePublic, runProbe, type CheckResult } from "@upzy/probes";
 import { and, desc, eq, gte, inArray, ne, sql } from "drizzle-orm";
 
@@ -198,6 +198,19 @@ export async function gatherEvidence(
       `${past.length} earlier incident(s) on this monitor in the last 90 days${durations.length ? `, resolved after ${durations.join(", ")} min` : ""}. Most recent: "${clip(past[0]!.title, 160)}".`,
     );
   } else add("history", "No earlier incidents on this monitor in the last 90 days.");
+
+  // Earlier incidents anywhere in this workspace that failed in a similar way, and how they ended.
+  const similar = await similarIncidents(db, inc.id, { limit: 3 }).catch(() => []);
+  if (similar.length)
+    add(
+      "similar incidents",
+      `${similar.length} earlier incident(s) in this workspace failed in a similar way: ${similar
+        .map(
+          (x) =>
+            `"${clip(x.title, 80)}"${x.monitorName ? ` on ${clip(x.monitorName, 40)}` : ""} (${Math.round(x.similarity * 100)}% alike, ${x.resolvedAt ? `resolved after ${minutes(x.resolvedAt.getTime() - x.createdAt.getTime())} min` : "not resolved"})`,
+        )
+        .join("; ")}.`,
+    );
 
   if (host) {
     const rows = await db
