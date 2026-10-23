@@ -24,7 +24,13 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   // Internal packages export TypeScript source directly.
-  transpilePackages: ["@upzy/ui", "@upzy/auth", "@upzy/validator", "@upzy/billing"],
+  transpilePackages: [
+    "@upzy/ui",
+    "@upzy/auth",
+    "@upzy/validator",
+    "@upzy/billing",
+    "@upzy/security",
+  ],
 
   // The production image runs `node server.js` from a trimmed copy of the app (see docker/Dockerfile.web). The
   // trace root is the repo root so the workspace packages (@upzy/*) are included.

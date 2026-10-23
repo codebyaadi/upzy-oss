@@ -5,6 +5,7 @@ import { Suspense } from "react";
 
 import { Checker } from "@/components/tools/checker";
 import { ToolsShell } from "@/components/tools/shell";
+import { guidesForTool } from "@/lib/guides";
 import { jsonLd, pageMetadata, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { TOOLS, toolBySlug } from "@/lib/tools";
 
@@ -29,6 +30,7 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
   const tool = toolBySlug((await params).tool);
   if (!tool) notFound();
   const others = TOOLS.filter((t) => t.id !== tool.id);
+  const guides = guidesForTool(tool.id);
 
   const faqData = jsonLd({
     "@context": "https://schema.org",
@@ -116,6 +118,24 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
           ))}
         </dl>
       </section>
+
+      {guides.length > 0 && (
+        <section className="mt-12 max-w-3xl">
+          <h2 className="text-2xl font-extrabold tracking-tighter">How to fix what it finds</h2>
+          <ul className="mt-4 space-y-2">
+            {guides.map((g) => (
+              <li key={g.slug}>
+                <Link
+                  href={`/guides/${g.slug}`}
+                  className="text-foreground font-semibold underline underline-offset-4"
+                >
+                  {g.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="mt-12 max-w-3xl">
         <h2 className="text-2xl font-extrabold tracking-tighter">More free checks</h2>

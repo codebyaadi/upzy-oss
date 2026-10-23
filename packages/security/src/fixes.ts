@@ -1,4 +1,6 @@
 import { describeStack, type Stack } from "./stack";
+export type { Stack } from "./stack";
+export { UNKNOWN_STACK } from "./stack";
 
 export type Language =
   | "nginx"

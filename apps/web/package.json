@@ -18,6 +18,7 @@
     "@next/env": "16.4.2",
     "@upzy/auth": "workspace:*",
     "@upzy/billing": "workspace:*",
+    "@upzy/security": "workspace:*",
     "@upzy/ui": "workspace:*",
     "@upzy/validator": "workspace:*",
     "api": "workspace:*",

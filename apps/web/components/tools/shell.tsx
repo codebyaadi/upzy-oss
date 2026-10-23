@@ -15,6 +15,9 @@ export function ToolsShell({ children }: { children: React.ReactNode }) {
             <Link href="/tools" className="hover:text-foreground">
               Free tools
             </Link>
+            <Link href="/guides" className="hover:text-foreground">
+              Guides
+            </Link>
             <Link href="/pricing" className="hover:text-foreground">
               Pricing
             </Link>
