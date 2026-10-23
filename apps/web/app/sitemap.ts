@@ -24,7 +24,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...TOOLS.map((t) => entry(`/tools/${t.slug}`, "monthly", 0.7)),
     entry("/guides", "monthly", 0.8),
     ...GUIDES.map((g) => entry(`/guides/${g.slug}`, "monthly", 0.7)),
-    ...["terms", "privacy", "acceptable-use", "ai-data", "bot"].map((p) =>
+    ...["terms", "privacy", "acceptable-use", "ai-data", "dpa", "bot"].map((p) =>
       entry(`/${p}`, "yearly", 0.3),
     ),
   ];

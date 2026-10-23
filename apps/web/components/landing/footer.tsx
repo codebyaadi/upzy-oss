@@ -16,6 +16,7 @@ const legal = [
   { href: "/privacy", label: "Privacy" },
   { href: "/acceptable-use", label: "Acceptable use" },
   { href: "/ai-data", label: "AI data use" },
+  { href: "/dpa", label: "DPA" },
 ] as const;
 
 const link = "text-muted-foreground hover:text-foreground";

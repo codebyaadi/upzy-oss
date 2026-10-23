@@ -9,7 +9,7 @@ export const legal = () => ({
   email: process.env.CONTACT_EMAIL?.trim() || null,
   /** Optional, e.g. "India". Without it the terms don't name a governing law. */
   jurisdiction: process.env.LEGAL_JURISDICTION?.trim() || null,
-  updated: "17 October 2026",
+  updated: "23 October 2026",
 });
 
 export const DOCS = [
@@ -17,5 +17,6 @@ export const DOCS = [
   { href: "/privacy", label: "Privacy Policy" },
   { href: "/acceptable-use", label: "Acceptable Use" },
   { href: "/ai-data", label: "AI data use" },
+  { href: "/dpa", label: "Data processing" },
   { href: "/bot", label: "UpzyBot" },
 ] as const;
