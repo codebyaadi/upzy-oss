@@ -9,12 +9,13 @@ import * as schema from "@upzy/db/schema";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { organization, openAPI } from "better-auth/plugins";
+import { organization, openAPI, twoFactor } from "better-auth/plugins";
 
 import { ac, orgRoles } from "./access";
 import { auditHook } from "./audit-hook";
 import { emails, queueEmail, type SendEmail } from "./email";
 import { parseSignupPolicy, signupBlockedReason, signupFacts, type SignupPolicy } from "./signup";
+import { twoFactorHook } from "./two-factor-hook";
 
 /** GitHub sign-in is on when both halves of an OAuth app's credentials are set. */
 export const githubCredentials = (env: Record<string, string | undefined> = process.env) => {
@@ -123,10 +124,12 @@ export const createAuth = (
         },
       },
     },
-    hooks: { after: auditHook(db) },
+    hooks: { before: twoFactorHook(db), after: auditHook(db) },
     plugins: [
       // The API reference page is a development aid: don't publish it.
       openAPI({ disableDefaultReference: process.env.NODE_ENV === "production" }),
+      // Authenticator-app codes and backup codes. Accounts with no password (GitHub sign-in) can turn it on too.
+      twoFactor({ issuer: "Upzy", allowPasswordless: true }),
       organization({
         ac,
         roles: orgRoles,

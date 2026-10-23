@@ -17,6 +17,8 @@ export const users = pgTable(
     name: text("name").notNull(),
     email: text("email").notNull(),
     emailVerified: boolean("email_verified").notNull().default(false),
+    /** Set by better-auth once an authenticator app has been confirmed. */
+    twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
     image: text("image"),
     /** Product emails beyond account mail (welcome, tips, trial reminders). Off once the user unsubscribes. */
     lifecycleEmails: boolean("lifecycle_emails").notNull().default(true),
@@ -69,6 +71,34 @@ export const accounts = pgTable(
   },
   (t) => [index("accounts_user_id_idx").on(t.userId)],
 );
+
+/** An authenticator app secret and backup codes, both encrypted by better-auth. */
+export const twoFactors = pgTable(
+  "two_factors",
+  {
+    id: text("id").primaryKey(),
+    secret: text("secret").notNull(),
+    backupCodes: text("backup_codes").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    verified: boolean("verified").notNull().default(true),
+    failedVerificationCount: integer("failed_verification_count").notNull().default(0),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  },
+  (t) => [index("two_factors_user_idx").on(t.userId), index("two_factors_secret_idx").on(t.secret)],
+);
+
+/** Organization-wide sign-in rules. A missing row means no rules. */
+export const organizationSecurity = pgTable("organization_security", {
+  organizationId: text("organization_id")
+    .primaryKey()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  /** Members without two-factor sign-in can not use the organization until they set it up. */
+  requireTwoFactor: boolean("require_two_factor").notNull().default(false),
+  updatedBy: text("updated_by").references(() => users.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const verifications = pgTable(
   "verifications",

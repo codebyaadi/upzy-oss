@@ -10,7 +10,8 @@
     "./roles": "./src/roles.ts",
     "./email": "./src/email.ts",
     "./unsubscribe": "./src/unsubscribe.ts",
-    "./signup": "./src/signup.ts"
+    "./signup": "./src/signup.ts",
+    "./two-factor-hook": "./src/two-factor-hook.ts"
   },
   "scripts": {
     "auth:generate": "bunx @better-auth/cli@latest generate --config src/server.ts",

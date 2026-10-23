@@ -4,3 +4,4 @@ export * from "./schema";
 export * from "./maintenance";
 export * from "./organization";
 export * from "./access";
+export * from "./org-security";

@@ -6,6 +6,7 @@ import { Skeleton } from "@upzy/ui/components/skeleton";
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
+import { TwoFactorSetup } from "@/components/app/two-factor-setup";
 import { ListSkeleton } from "@/components/app/ui";
 import { api } from "@/lib/api";
 import { unwrap, useApi } from "@/lib/use-api";
@@ -62,6 +63,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     });
   }, [isPending, session, orgId, router]);
 
+  // An organization can require two-factor. Until it is set up, the only thing to show is how to set it up.
+  const security = useApi(session ? `security:${session.user.id}` : null, () =>
+    unwrap(api.security.get()),
+  );
+
   const { data: roleData } = useApi(orgId ? `role:${orgId}` : null, async () => {
     const { data } = await organization.getActiveMemberRole();
     return effectiveRole(data?.role) ?? "viewer";
@@ -101,6 +107,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
   }, [session, workspaces, selected, setWorkspaceId, roleData, orgId]);
 
+  if (security.data?.blocked)
+    return (
+      <div className="ambient grid min-h-svh place-items-center px-4 py-10">
+        <div className="bg-card/70 w-full max-w-md rounded-3xl border p-8 shadow-[var(--shadow-panel)]">
+          <h1 className="text-2xl font-extrabold tracking-tight">Set up two-factor sign-in</h1>
+          <p className="text-muted-foreground mt-2 mb-6 text-sm leading-relaxed">
+            Your organization requires two-factor authentication. Set it up to continue.
+          </p>
+          <TwoFactorSetup onChange={() => void security.mutate()} />
+        </div>
+      </div>
+    );
   // Signed in, but limited to workspaces they don't have yet.
   if (!value && workspaces && workspaces.length === 0 && roleData && !hasRole(roleData, "admin"))
     return (

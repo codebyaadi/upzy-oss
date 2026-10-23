@@ -25,6 +25,7 @@ import { overviewModule } from "./modules/overview";
 import { pingModule } from "./modules/ping";
 import { publicStatusModule } from "./modules/public-status";
 import { reportsModule } from "./modules/reports";
+import { securityModule } from "./modules/security";
 import { statusPageModule, type StatusDns } from "./modules/status-page";
 import { toolsModule, type ToolsDeps } from "./modules/tools";
 import { workspaceModule } from "./modules/workspace";
@@ -153,6 +154,7 @@ export const createApp = ({
       .use(findingModule(db, authP))
       .use(discoveryModule(db, authP, billing))
       .use(auditModule(db, authP))
+      .use(securityModule(db, authP))
       .use(publicStatusModule(db, { webOrigin, billing }))
       .use(pingModule(db))
       .use(toolsModule(tools))

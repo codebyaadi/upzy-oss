@@ -7,6 +7,8 @@ export class HttpError extends Error {
     message: string,
     /** Who was refused, when known, so denied attempts can be audited. */
     public actor?: { organizationId: string; userId: string },
+    /** A stable word the web app can act on, such as sending someone to set up two-factor. */
+    public code?: string,
   ) {
     super(message);
   }
@@ -25,7 +27,7 @@ export const errors = new Elysia({ name: "errors" })
   .onError({ as: "global" }, ({ code, error, set }) => {
     if (error instanceof HttpError) {
       set.status = error.status;
-      return { message: error.message };
+      return error.code ? { message: error.message, code: error.code } : { message: error.message };
     }
     if (error instanceof ZodError) {
       set.status = 400;

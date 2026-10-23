@@ -125,6 +125,10 @@ export default function Dpa() {
         <UL>
           <li>Everything travels over HTTPS.</li>
           <li>
+            Two-factor sign-in with an authenticator app is available to every user, and an
+            organization can require it for all of its members.
+          </li>
+          <li>
             Passwords are hashed. Provider keys, tokens and channel secrets are encrypted at rest
             with AES-256-GCM and never shown again after you save them.
           </li>

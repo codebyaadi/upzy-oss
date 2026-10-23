@@ -33,12 +33,14 @@ function LoginForm() {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     setBusy(true);
-    const { error } = await signIn.email({
+    const { data, error } = await signIn.email({
       email: String(f.get("email")),
       password: String(f.get("password")),
     });
     setBusy(false);
     if (error) return toast.error(error.message ?? "Could not sign in");
+    // Someone with two-factor is sent on to enter their code (the auth client does that redirect itself).
+    if (data && "twoFactorRedirect" in data && data.twoFactorRedirect) return;
     router.replace(next);
   }
 
