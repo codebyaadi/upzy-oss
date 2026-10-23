@@ -38,7 +38,7 @@ import type { Route } from "next";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Logo } from "@/components/logo";
 import { api } from "@/lib/api";
@@ -201,7 +201,42 @@ export function Shell({
   const router = useRouter();
   const { workspaces, workspace, setWorkspaceId, user, can } = useWorkspace();
   const [collapsed, setCollapsed] = useState(initialCollapsed);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(true);
+  const [moreBelow, setMoreBelow] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const bannerKey = `upzy:verify-banner:${user.id}`;
+
+  // "Dismiss" is remembered in this browser, so the banner doesn't come back on every page load. It starts
+  // hidden and is shown after the check, which also avoids a flash for people who already dismissed it.
+  useEffect(() => {
+    try {
+      setDismissed(localStorage.getItem(bannerKey) === "1");
+    } catch {
+      setDismissed(false);
+    }
+  }, [bannerKey]);
+  const dismissBanner = () => {
+    setDismissed(true);
+    try {
+      localStorage.setItem(bannerKey, "1");
+    } catch {
+      /* private mode: it will show again next time */
+    }
+  };
+
+  // A soft fade at the bottom of the menu while there is more to scroll to.
+  const measure = useCallback(() => {
+    const el = navRef.current;
+    if (el) setMoreBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 4);
+  }, []);
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [measure, collapsed]);
   const [resending, setResending] = useState(false);
   const initials = initialsOf(user.name);
 
@@ -348,10 +383,13 @@ export function Shell({
         )}
         {!collapsed && <div className="mt-4">{workspacePicker("h-10 w-full")}</div>}
         <nav
+          ref={navRef}
           aria-label="Main"
+          onScroll={measure}
           className={cn(
             "mt-4 flex flex-1 flex-col gap-4 overflow-y-auto",
             collapsed ? "scroll-hidden" : "scroll-quiet -mr-2 pr-2",
+            moreBelow && "scroll-fade-bottom",
           )}
         >
           {groups.map((g) => {
@@ -451,7 +489,7 @@ export function Shell({
               <Button variant="ghost" size="sm" loading={resending} onClick={resend}>
                 Resend email
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => setDismissed(true)}>
+              <Button variant="ghost" size="sm" onClick={dismissBanner}>
                 Dismiss
               </Button>
             </span>

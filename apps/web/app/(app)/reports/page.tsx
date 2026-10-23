@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 
 import { ViewOnlyNote } from "@/components/app/can";
 import { SelectField } from "@/components/app/select-field";
+import { SetupChecklist } from "@/components/app/setup-checklist";
 import { ErrorNote, Field, PageHeader, Panel } from "@/components/app/ui";
 import { useWorkspace } from "@/components/app/workspace";
 import { api } from "@/lib/api";
@@ -81,6 +82,24 @@ export default function ReportsPage() {
       />
       {!can("admin") && <ViewOnlyNote what="client reports" />}
       <ErrorNote error={report.error} />
+
+      {can("admin") && report.data && (
+        <SetupChecklist
+          title="Send your first client report"
+          steps={[
+            {
+              label: "Add the people who should get it",
+              hint: "Type their addresses under Recipients, then Save.",
+              done: report.data.recipients.length > 0,
+            },
+            {
+              label: "Switch reports on",
+              hint: "Choose weekly or monthly and turn on Send reports.",
+              done: report.data.enabled,
+            },
+          ]}
+        />
+      )}
 
       {can("admin") && (
         <div className="grid max-w-5xl gap-4 lg:grid-cols-[1fr_20rem]">

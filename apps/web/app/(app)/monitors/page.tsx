@@ -1,7 +1,9 @@
 "use client";
 
+import { cn } from "@upzy/ui/lib/utils";
 import Link from "next/link";
 
+import { DensityToggle, useDensity } from "@/components/app/density";
 import { EmptyState, ErrorNote, ListSkeleton, PageHeader, StatusPill } from "@/components/app/ui";
 import { useWorkspace } from "@/components/app/workspace";
 import { ButtonLink } from "@/components/button-link";
@@ -15,6 +17,9 @@ export default function MonitorsPage() {
     unwrap(api.monitor.get({ query: { workspaceId: workspace.id } })),
   );
 
+  const [density, setDensity] = useDensity();
+  const compact = density === "compact";
+
   const newButton = (
     <ButtonLink size="lg" href="/monitors/new">
       New monitor
@@ -26,7 +31,14 @@ export default function MonitorsPage() {
       <PageHeader
         title="Monitors"
         description="Everything Upzy is watching in this workspace."
-        actions={data && data.length > 0 && can("member") ? newButton : undefined}
+        actions={
+          data && data.length > 0 ? (
+            <span className="flex flex-wrap items-center gap-3">
+              <DensityToggle value={density} onValueChange={setDensity} />
+              {can("member") && newButton}
+            </span>
+          ) : undefined
+        }
       />
       <ErrorNote error={error} />
       {isLoading && <ListSkeleton />}
@@ -49,18 +61,23 @@ export default function MonitorsPage() {
         />
       )}
       {data && data.length > 0 && (
-        <ul className="space-y-3">
+        <ul className={compact ? "space-y-1.5" : "space-y-3"}>
           {data.map((m) => {
             const status = !m.active ? "paused" : m.maintenance ? "maintenance" : m.lastStatus;
             return (
               <li key={m.id}>
                 <Link
                   href={`/monitors/${m.id}`}
-                  className="bg-card/70 grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-2 rounded-3xl border px-6 py-5 backdrop-blur transition-shadow hover:shadow-[var(--shadow-panel)] sm:grid-cols-[1fr_auto_auto_auto]"
+                  className={cn(
+                    "bg-card/70 grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-2 border backdrop-blur transition-shadow hover:shadow-[var(--shadow-panel)] sm:grid-cols-[1fr_auto_auto_auto]",
+                    compact ? "gap-y-0 rounded-2xl px-4 py-2" : "rounded-3xl px-6 py-5",
+                  )}
                 >
                   <div className="min-w-0">
                     <p className="truncate font-bold tracking-tight">{m.name}</p>
-                    <p className="text-muted-foreground truncate text-sm">
+                    <p
+                      className={cn("text-muted-foreground truncate text-sm", compact && "text-xs")}
+                    >
                       <span className="uppercase">{m.type}</span>
                       {m.type === "heartbeat" ? " · waits for pings" : ` · ${m.target}`}
                     </p>

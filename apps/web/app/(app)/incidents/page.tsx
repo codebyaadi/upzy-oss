@@ -1,8 +1,10 @@
 "use client";
 
+import { cn } from "@upzy/ui/lib/utils";
 import Link from "next/link";
 import { useState } from "react";
 
+import { DensityToggle, useDensity } from "@/components/app/density";
 import { Segmented } from "@/components/app/segmented";
 import {
   EmptyState,
@@ -23,6 +25,8 @@ const FILTERS = [
 
 export default function IncidentsPage() {
   const { workspace } = useWorkspace();
+  const [density, setDensity] = useDensity();
+  const compact = density === "compact";
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("active");
   const { data, error, isLoading } = useApi(`incidents:${workspace.id}:${filter}`, () =>
     unwrap(
@@ -42,12 +46,15 @@ export default function IncidentsPage() {
         title="Incidents"
         description="Outages Upzy detected, and who was told about them."
         actions={
-          <Segmented
-            label="Filter incidents"
-            value={filter}
-            onValueChange={setFilter}
-            options={FILTERS.map((f) => ({ value: f.id, label: f.label }))}
-          />
+          <span className="flex flex-wrap items-center gap-3">
+            <DensityToggle value={density} onValueChange={setDensity} />
+            <Segmented
+              label="Filter incidents"
+              value={filter}
+              onValueChange={setFilter}
+              options={FILTERS.map((f) => ({ value: f.id, label: f.label }))}
+            />
+          </span>
         }
       />
       <ErrorNote error={error} />
@@ -62,12 +69,15 @@ export default function IncidentsPage() {
           }
         />
       )}
-      <ul className="space-y-3">
+      <ul className={compact ? "space-y-1.5" : "space-y-3"}>
         {data?.map((i) => (
           <li key={i.id}>
             <Link
               href={`/incidents/${i.id}`}
-              className="bg-card/70 flex items-center justify-between gap-4 rounded-3xl border px-6 py-5 backdrop-blur transition-shadow hover:shadow-[var(--shadow-panel)]"
+              className={cn(
+                "bg-card/70 flex items-center justify-between gap-4 border backdrop-blur transition-shadow hover:shadow-[var(--shadow-panel)]",
+                compact ? "rounded-2xl px-4 py-2" : "rounded-3xl px-6 py-5",
+              )}
             >
               <span className="min-w-0">
                 <span className="block truncate font-bold tracking-tight">{i.title}</span>

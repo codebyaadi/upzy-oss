@@ -27,6 +27,10 @@ html {
 .scroll-quiet:hover::-webkit-scrollbar-thumb {
   background: color-mix(in oklab, var(--foreground) 22%, transparent);
 }
+/* Fades the last stretch of a scroll area to hint that there is more below. */
+.scroll-fade-bottom {
+  mask-image: linear-gradient(to bottom, black calc(100% - 2rem), transparent);
+}
 /* The folded icon rail has no room for one at all. */
 .scroll-hidden {
   scrollbar-width: none;

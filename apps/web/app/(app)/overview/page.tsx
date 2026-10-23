@@ -3,6 +3,7 @@
 import { cn } from "@upzy/ui/lib/utils";
 import { useRouter } from "next/navigation";
 
+import { SetupChecklist } from "@/components/app/setup-checklist";
 import { EmptyState, ErrorNote, ListSkeleton, PageHeader } from "@/components/app/ui";
 import { useWorkspace } from "@/components/app/workspace";
 import { api } from "@/lib/api";
@@ -38,6 +39,30 @@ export default function OverviewPage() {
       />
       <ErrorNote error={overview.error} />
       {overview.isLoading && !overview.data && <ListSkeleton rows={3} />}
+      {overview.data && (
+        <SetupChecklist
+          title="Set up your clients"
+          steps={[
+            {
+              label: "Create a workspace for each client",
+              hint: "Use the workspace menu in the sidebar. Each client's monitors, incidents and findings stay separate.",
+              done: overview.data.length > 1,
+            },
+            {
+              label: "Add monitors to every workspace",
+              hint: "Watch the client's website so their outages show up here first.",
+              done: overview.data.every((w) => w.monitors.total > 0),
+              href: "/get-started",
+            },
+            {
+              label: "Publish a status page for a client",
+              hint: "A public page with the client's own logo and domain.",
+              done: overview.data.some((w) => w.statusPage),
+              href: "/status-pages",
+            },
+          ]}
+        />
+      )}
       {overview.data?.length === 0 && (
         <EmptyState title="No workspaces yet" body="Create one from the workspace menu." />
       )}
