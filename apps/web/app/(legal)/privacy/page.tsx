@@ -2,9 +2,15 @@ import type { Metadata } from "next";
 
 import { Contact, LegalPage, P, Section, UL } from "@/components/legal/legal-page";
 import { legal } from "@/lib/legal";
+import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Privacy Policy" };
+export const metadata: Metadata = pageMetadata({
+  title: "Privacy Policy",
+  description:
+    "How Upzy handles your data: what we collect, why, how long we keep it, and your rights.",
+  path: "/privacy",
+});
 
 export default function Privacy() {
   const { entity } = legal();

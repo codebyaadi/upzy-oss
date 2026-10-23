@@ -1,20 +1,28 @@
 import type { MetadataRoute } from "next";
 
+import { SITE_URL } from "@/lib/seo";
 import { TOOLS } from "@/lib/tools";
 
+/** Every public page, once. Private and noindex pages are left out on purpose. */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3001";
+  const built = new Date();
+  const entry = (
+    path: string,
+    changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"],
+    priority: number,
+  ) => ({
+    url: path === "/" ? SITE_URL : `${SITE_URL}${path}`,
+    lastModified: built,
+    changeFrequency,
+    priority,
+  });
   return [
-    { url: site, changeFrequency: "monthly", priority: 1 },
-    ...["tools", ...TOOLS.map((t) => `tools/${t.slug}`)].map((p) => ({
-      url: `${site}/${p}`,
-      changeFrequency: "monthly" as const,
-      priority: 0.7,
-    })),
-    ...["pricing", "terms", "privacy", "acceptable-use", "ai-data", "bot"].map((p) => ({
-      url: `${site}/${p}`,
-      changeFrequency: "yearly" as const,
-      priority: 0.3,
-    })),
+    entry("/", "weekly", 1),
+    entry("/pricing", "monthly", 0.8),
+    entry("/tools", "monthly", 0.8),
+    ...TOOLS.map((t) => entry(`/tools/${t.slug}`, "monthly", 0.7)),
+    ...["terms", "privacy", "acceptable-use", "ai-data", "bot"].map((p) =>
+      entry(`/${p}`, "yearly", 0.3),
+    ),
   ];
 }

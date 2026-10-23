@@ -54,6 +54,8 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_URL=${{ vars.PUBLIC_API_URL }}
             NEXT_PUBLIC_SITE_URL=${{ vars.PUBLIC_SITE_URL }}
+            NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=${{ vars.GOOGLE_SITE_VERIFICATION }}
+            NEXT_PUBLIC_BING_SITE_VERIFICATION=${{ vars.BING_SITE_VERIFICATION }}
           tags: |
             ghcr.io/${{ steps.meta.outputs.repo }}-web:${{ steps.meta.outputs.tag }}
             ghcr.io/${{ steps.meta.outputs.repo }}-web:latest

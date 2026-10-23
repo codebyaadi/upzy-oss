@@ -2,9 +2,14 @@ import type { Metadata } from "next";
 
 import { Contact, LegalPage, P, Section, UL } from "@/components/legal/legal-page";
 import { legal } from "@/lib/legal";
+import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Terms of Service" };
+export const metadata: Metadata = pageMetadata({
+  title: "Terms of Service",
+  description: "The terms of service for using Upzy.",
+  path: "/terms",
+});
 
 export default function Terms() {
   const { entity, jurisdiction } = legal();

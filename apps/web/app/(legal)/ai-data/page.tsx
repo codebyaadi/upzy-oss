@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
 
 import { Contact, LegalPage, P, Section, UL } from "@/components/legal/legal-page";
+import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "AI data use" };
+export const metadata: Metadata = pageMetadata({
+  title: "AI data use",
+  description:
+    "What data the optional AI features send to your chosen provider, and how secrets are redacted first.",
+  path: "/ai-data",
+});
 
 export default function AiData() {
   return (

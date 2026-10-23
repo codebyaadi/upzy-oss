@@ -1,19 +1,41 @@
-import { TRIAL_DAYS } from "@upzy/billing";
+import { PAID_PLANS, PLANS, TRIAL_DAYS } from "@upzy/billing";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ButtonLink } from "@/components/button-link";
 import { Logo } from "@/components/logo";
 import { PlanGrid } from "@/components/plan-cards";
+import { jsonLd, pageMetadata, SITE_NAME, SITE_URL } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Pricing",
-  description: "Uptime monitoring and security checks with one grade. Start free, no card needed.",
-};
+  description:
+    "Upzy pricing: a free plan, then paid plans from $15 a month. Uptime monitoring, security scans, alerts and status pages, with unlimited team members. Every new account gets a free Pro trial.",
+  path: "/pricing",
+});
+
+const offers = jsonLd({
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: SITE_NAME,
+  url: SITE_URL,
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "Web",
+  offers: ["free", ...PAID_PLANS].map((id) => ({
+    "@type": "Offer",
+    name: PLANS[id as keyof typeof PLANS].name,
+    description: PLANS[id as keyof typeof PLANS].blurb,
+    price: PLANS[id as keyof typeof PLANS].price.monthly,
+    priceCurrency: "USD",
+    url: `${SITE_URL}/pricing`,
+    availability: "https://schema.org/InStock",
+  })),
+});
 
 export default function Pricing() {
   return (
     <div className="ambient min-h-svh px-4 py-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: offers }} />
       <div className="mx-auto max-w-6xl">
         <Link href="/" aria-label="Upzy home" className="inline-block">
           <Logo />

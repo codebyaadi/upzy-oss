@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 
 import { Contact, LegalPage, P, Section, UL } from "@/components/legal/legal-page";
+import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Acceptable Use" };
+export const metadata: Metadata = pageMetadata({
+  title: "Acceptable Use",
+  description: "What you may and may not do with Upzy, including what you may scan.",
+  path: "/acceptable-use",
+});
 
 export default function AcceptableUse() {
   return (

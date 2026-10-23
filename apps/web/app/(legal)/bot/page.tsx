@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
 
 import { Contact, LegalPage, P, Section, UL } from "@/components/legal/legal-page";
+import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "UpzyBot" };
+export const metadata: Metadata = pageMetadata({
+  title: "UpzyBot",
+  description:
+    "UpzyBot: the user agent Upzy's monitors and passive security checks identify themselves with, and how to contact us.",
+  path: "/bot",
+});
 
 export default function Bot() {
   return (

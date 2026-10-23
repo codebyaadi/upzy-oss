@@ -6,6 +6,8 @@ import {
   Globe02Icon,
   Calendar03Icon,
   Layers01Icon,
+  UserGroupIcon,
+  Wrench01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { Badge } from "@upzy/ui/components/badge";
@@ -46,6 +48,18 @@ const features: { icon: IconSvgElement; title: string; body: string; live?: bool
     title: "Public status pages",
     live: true,
     body: "A page your customers can check: whether each service is up, 90 days of uptime and recent incidents. It shows only the names you choose, never your internal addresses or error details.",
+  },
+  {
+    icon: Wrench01Icon,
+    title: "Maintenance windows and slow-response warnings",
+    live: true,
+    body: "Schedule planned downtime so a deploy doesn't page anyone, and see a monitor as degraded when it answers but is too slow, before it goes down.",
+  },
+  {
+    icon: UserGroupIcon,
+    title: "Built for agencies",
+    live: true,
+    body: "A workspace per client, one screen for all of them, access limited to a client's own workspace, their logo on the status page, and scheduled reports emailed to them.",
   },
   {
     icon: Calendar03Icon,

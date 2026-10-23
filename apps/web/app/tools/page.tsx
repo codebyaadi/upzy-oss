@@ -2,18 +2,33 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ToolsShell } from "@/components/tools/shell";
+import { jsonLd, pageMetadata, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { TOOLS } from "@/lib/tools";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Free website security tools",
   description:
-    "Free checks for your website's security headers, SSL certificate, and email spoofing protection. No sign-up, with plain-English fixes for your host.",
-  alternates: { canonical: "/tools" },
-};
+    "Free checks for your website's security headers, SSL certificate, and email spoofing protection (SPF and DMARC). No sign-up, with plain-English fixes for your host.",
+  path: "/tools",
+});
+
+const itemList = jsonLd({
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: "Free website security tools",
+  itemListElement: TOOLS.map((t, i) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    name: t.title,
+    url: `${SITE_URL}/tools/${t.slug}`,
+  })),
+  publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+});
 
 export default function ToolsIndex() {
   return (
     <ToolsShell>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemList }} />
       <header className="max-w-2xl">
         <h1 className="text-4xl font-extrabold tracking-tighter text-balance sm:text-5xl">
           Free website security tools

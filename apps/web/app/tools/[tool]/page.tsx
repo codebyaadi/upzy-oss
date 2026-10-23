@@ -5,6 +5,7 @@ import { Suspense } from "react";
 
 import { Checker } from "@/components/tools/checker";
 import { ToolsShell } from "@/components/tools/shell";
+import { jsonLd, pageMetadata, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { TOOLS, toolBySlug } from "@/lib/tools";
 
 export const dynamicParams = false;
@@ -17,11 +18,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const tool = toolBySlug((await params).tool);
   if (!tool) return {};
-  return {
+  return pageMetadata({
     title: tool.title,
     description: tool.description,
-    alternates: { canonical: `/tools/${tool.slug}` },
-  };
+    path: `/tools/${tool.slug}`,
+  });
 }
 
 export default async function ToolPage({ params }: { params: Promise<{ tool: string }> }) {
@@ -29,15 +30,44 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
   if (!tool) notFound();
   const others = TOOLS.filter((t) => t.id !== tool.id);
 
-  const faqData = JSON.stringify({
+  const faqData = jsonLd({
     "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: tool.faq.map((f) => ({
-      "@type": "Question",
-      name: f.q,
-      acceptedAnswer: { "@type": "Answer", text: f.a },
-    })),
-  }).replace(/</g, "\\u003c");
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        name: tool.title,
+        url: `${SITE_URL}/tools/${tool.slug}`,
+        description: tool.description,
+        applicationCategory: "SecurityApplication",
+        operatingSystem: "Any",
+        browserRequirements: "Requires JavaScript",
+        isAccessibleForFree: true,
+        offers: { "@type": "Offer", price: 0, priceCurrency: "USD" },
+        publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: SITE_NAME, item: SITE_URL },
+          { "@type": "ListItem", position: 2, name: "Free tools", item: `${SITE_URL}/tools` },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: tool.name,
+            item: `${SITE_URL}/tools/${tool.slug}`,
+          },
+        ],
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: tool.faq.map((f) => ({
+          "@type": "Question",
+          name: f.q,
+          acceptedAnswer: { "@type": "Answer", text: f.a },
+        })),
+      },
+    ],
+  });
 
   return (
     <ToolsShell>
