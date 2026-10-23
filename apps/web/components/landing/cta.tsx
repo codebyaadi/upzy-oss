@@ -18,6 +18,14 @@ export function Cta() {
       <footer className="text-muted-foreground mx-auto mt-16 flex max-w-5xl flex-col items-center justify-between gap-5 text-xs sm:flex-row">
         <Logo />
         <nav aria-label="Legal" className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+          <a
+            href="https://github.com/codebyaadi/upzy-oss"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground underline underline-offset-4"
+          >
+            Open source on GitHub
+          </a>
           <Link href="/tools" className="hover:text-foreground underline underline-offset-4">
             Free tools
           </Link>

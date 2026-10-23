@@ -1,8 +1,11 @@
+import { buttonVariants } from "@upzy/ui/lib/button-variants";
 import Link from "next/link";
 
 import { NavActions } from "@/components/auth-aware";
 import { ButtonLink } from "@/components/button-link";
 import { Logo } from "@/components/logo";
+
+const REPO_URL = "https://github.com/codebyaadi/upzy-oss";
 
 const links = [
   { href: "#features", label: "Features" },
@@ -31,6 +34,16 @@ export function Nav() {
               </ButtonLink>
             </li>
           ))}
+          <li>
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              GitHub
+            </a>
+          </li>
         </ul>
         <NavActions />
       </nav>
