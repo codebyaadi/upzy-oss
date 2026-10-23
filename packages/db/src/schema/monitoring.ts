@@ -91,6 +91,11 @@ export const monitors = pgTable(
     /** Consecutive failed checks before the monitor is declared down. */
     failureThreshold: integer("failure_threshold").notNull().default(2),
     consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+    /** Where it is checked from. Empty means the main server only. See docs/MULTI-REGION.md. */
+    regions: text("regions")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     /** Consecutive successful checks slower than `latencyThresholdMs`; three in a row make the monitor "degraded". */
     consecutiveSlow: integer("consecutive_slow").notNull().default(0),
     /** Named secrets (JSON object, encrypted at rest) the monitor may use as {{secret.NAME}}. Write-only. */
@@ -110,6 +115,21 @@ export const monitors = pgTable(
     index("monitors_active_bucket_next_run_idx").on(t.active, t.bucket, t.nextRun),
     index("monitors_workspace_id_idx").on(t.workspaceId),
   ],
+);
+
+/** How a monitor looks from each region it is checked from. Only used for monitors with `regions`. */
+export const monitorRegionState = pgTable(
+  "monitor_region_state",
+  {
+    monitorId: uuid("monitor_id")
+      .notNull()
+      .references(() => monitors.id, { onDelete: "cascade" }),
+    region: text("region").notNull(),
+    consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+    lastStatus: checkStatus("last_status").notNull().default("unknown"),
+    lastCheckAt: timestamp("last_check_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.monitorId, t.region] })],
 );
 
 export const monitorChecks = pgTable(

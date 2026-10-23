@@ -1,8 +1,9 @@
 import { randomBytes } from "node:crypto";
 
 import { hasRole } from "@upzy/auth/roles";
+import { PLANS } from "@upzy/billing";
 import { decryptJson, encryptJson } from "@upzy/crypto";
-import { activeMaintenance, schema, type Db } from "@upzy/db";
+import { activeMaintenance, offeredRegions, schema, type Db } from "@upzy/db";
 import {
   CreateMonitorSchema,
   UpdateMonitorSchema,
@@ -19,7 +20,7 @@ import { orgWorkspaceIds, requireWorkspace } from "../lib/scope";
 import type { AuthPlugin } from "../plugins/auth";
 import { HttpError } from "../plugins/errors";
 
-const { monitors, monitorChecks } = schema;
+const { monitors, monitorChecks, monitorRegionState } = schema;
 const Params = z.object({ id: z.uuid() });
 const ListQuery = z.object({ workspaceId: z.uuid().optional() });
 const RANGES = {
@@ -48,6 +49,17 @@ export const monitorModule = (
       canSeePing: hasRole(role, "member"),
     });
 
+  /** The regions asked for, if this installation offers them and the plan allows that many. */
+  const chosenRegions = async (orgId: string, asked: string[]) => {
+    const regions = [...new Set(asked)];
+    const offered = offeredRegions();
+    const unknown = regions.filter((r) => !offered.includes(r));
+    if (unknown.length)
+      throw new HttpError(422, `This installation doesn't offer the region ${unknown.join(", ")}.`);
+    await billing.assertRegions(db, orgId, Math.max(regions.length, 1));
+    return regions;
+  };
+
   /** Monitors only ever resolve through the workspaces this person may see in their organization. */
   const owned = (orgId: string, userId: string, id: string) =>
     and(eq(monitors.id, id), inArray(monitors.workspaceId, orgWorkspaceIds(db, orgId, userId)));
@@ -72,6 +84,9 @@ export const monitorModule = (
                 : body.target;
           if (!target) throw new HttpError(422, "A target is required");
 
+          // Checked from the main server unless regions are chosen. A heartbeat has nothing to check from anywhere.
+          const regions = heartbeat ? [] : await chosenRegions(orgId, body.regions);
+
           const config = { ...body.config };
           if (heartbeat)
             config.grace ??= Math.min(3600, Math.max(60, Math.round(config.expectEvery! * 0.1)));
@@ -88,6 +103,7 @@ export const monitorModule = (
               active: body.active,
               config,
               failureThreshold: heartbeat ? 1 : body.failureThreshold,
+              regions,
               latencyThresholdMs: body.latencyThresholdMs,
               secretsEncrypted: hasSecrets ? encryptJson(body.secrets, opts.encryptionKey) : null,
               ...(heartbeat ? { heartbeatToken: newToken(), heartbeatSince: new Date() } : {}),
@@ -155,6 +171,15 @@ export const monitorModule = (
         { org: true, query: ListQuery },
       )
       .get(
+        "/regions",
+        async ({ orgId }) => {
+          const { ent } = await billing.entitlementFor(db, orgId);
+          const max = PLANS[ent.plan].limits.regions;
+          return { regions: offeredRegions(), max: Number.isFinite(max) ? max : null };
+        },
+        { org: true },
+      )
+      .get(
         "/:id",
         async ({ user, params, orgId, role }) => {
           const [row] = await db
@@ -162,9 +187,20 @@ export const monitorModule = (
             .from(monitors)
             .where(owned(orgId, user.id, params.id));
           if (!row) throw new HttpError(404, "Monitor not found");
+          const states = row.regions.length
+            ? await db
+                .select({
+                  region: monitorRegionState.region,
+                  status: monitorRegionState.lastStatus,
+                  lastCheckAt: monitorRegionState.lastCheckAt,
+                })
+                .from(monitorRegionState)
+                .where(eq(monitorRegionState.monitorId, row.id))
+            : [];
           return {
             ...show(row, role),
             maintenance: maintenanceOf((await activeMaintenance(db, [row.id])).get(row.id)),
+            regionStates: states,
           };
         },
         { org: true, params: Params },
@@ -182,8 +218,10 @@ export const monitorModule = (
           if (!heartbeat && body.interval !== undefined && body.interval < cur.interval)
             await billing.assertInterval(db, orgId, body.interval);
 
-          const { secrets, config, interval, ...plain } = body;
+          const { secrets, config, interval, regions, ...plain } = body;
           const patch: Partial<typeof monitors.$inferInsert> = { ...plain };
+          if (regions !== undefined && !heartbeat)
+            patch.regions = await chosenRegions(orgId, regions);
           if (!heartbeat && interval !== undefined) patch.interval = interval;
 
           // Secrets: names sent are kept (null) or replaced (a value); names left out are deleted.

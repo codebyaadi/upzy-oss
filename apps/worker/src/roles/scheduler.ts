@@ -1,11 +1,13 @@
 import type { Db } from "@upzy/db";
-import { schema } from "@upzy/db";
+import { checkQueue, regionsOf, schema } from "@upzy/db";
 import { enqueue } from "@upzy/queue";
 import { and, eq, lte, sql } from "drizzle-orm";
 
 export const CHECK_QUEUE = "check";
 export interface CheckJob {
   monitorId: string;
+  /** Which region's prober runs it. Absent on jobs queued before regions existed: the main server. */
+  region?: string;
 }
 
 /**
@@ -17,7 +19,7 @@ export async function scheduleDue(db: Db, batch = 200): Promise<number> {
   const { monitors } = schema;
   return db.transaction(async (tx) => {
     const due = await tx
-      .select({ id: monitors.id, interval: monitors.interval })
+      .select({ id: monitors.id, interval: monitors.interval, regions: monitors.regions })
       .from(monitors)
       .where(and(eq(monitors.active, true), lte(monitors.nextRun, sql`now()`)))
       .orderBy(monitors.nextRun)
@@ -29,12 +31,14 @@ export async function scheduleDue(db: Db, batch = 200): Promise<number> {
         .update(monitors)
         .set({ nextRun: sql`now() + ${`${m.interval} seconds`}::interval` })
         .where(eq(monitors.id, m.id));
-      await enqueue<CheckJob>(
-        tx,
-        CHECK_QUEUE,
-        { monitorId: m.id },
-        { dedupeKey: m.id, maxAttempts: 2 },
-      );
+      // One job per region, each on its own queue so only that region's probers pick it up.
+      for (const region of regionsOf(m))
+        await enqueue<CheckJob>(
+          tx,
+          checkQueue(region),
+          { monitorId: m.id, region },
+          { dedupeKey: `${m.id}:${region}`, maxAttempts: 2 },
+        );
     }
     return due.length;
   });

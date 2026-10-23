@@ -8,7 +8,12 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { ViewOnlyNote } from "@/components/app/can";
-import { FlowSteps, HeartbeatFields, HttpOptions } from "@/components/app/monitor-fields";
+import {
+  FlowSteps,
+  HeartbeatFields,
+  HttpOptions,
+  RegionPicker,
+} from "@/components/app/monitor-fields";
 import { SelectField } from "@/components/app/select-field";
 import { BackLink, DetailSkeleton, ErrorNote, Field, PageHeader, Panel } from "@/components/app/ui";
 import { useWorkspace } from "@/components/app/workspace";
@@ -58,6 +63,7 @@ export default function EditMonitorPage() {
             : {
                 interval: Number(d.every),
                 failureThreshold: Number(d.threshold),
+                regions: d.regions,
                 latencyThresholdMs: d.slowMs.trim() ? Number(d.slowMs) : null,
               }),
           config: configOf(d),
@@ -155,6 +161,9 @@ export default function EditMonitorPage() {
                 />
               </Field>
             </div>
+          )}
+          {d.type !== "heartbeat" && (
+            <RegionPicker value={d.regions} onChange={(regions) => set({ regions })} />
           )}
           <div className="flex gap-2">
             <Button type="submit" size="lg" loading={busy}>

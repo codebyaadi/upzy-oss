@@ -36,6 +36,8 @@ export interface Draft {
   threshold: string;
   /** Milliseconds above which a successful check counts as slow. Empty: never degraded. */
   slowMs: string;
+  /** Where to check from. Empty: the main server. */
+  regions: string[];
   keyword: string;
   method: "GET" | "POST" | "HEAD";
   headers: Pair[];
@@ -65,6 +67,7 @@ export const emptyDraft = (): Draft => ({
   every: "60",
   threshold: "2",
   slowMs: "",
+  regions: [],
   keyword: "",
   method: "GET",
   headers: [],
@@ -139,6 +142,7 @@ type Stored = {
   interval: number;
   failureThreshold: number;
   latencyThresholdMs?: number | null;
+  regions?: string[];
   secretNames: string[];
   config: {
     method?: "GET" | "HEAD" | "POST";
@@ -176,6 +180,7 @@ export function draftOf(m: Stored): Draft {
     every: String(m.interval),
     threshold: String(m.failureThreshold),
     slowMs: m.latencyThresholdMs ? String(m.latencyThresholdMs) : "",
+    regions: m.regions ?? [],
     keyword: c.keyword ?? "",
     method: c.method ?? "GET",
     headers: toPairs(c.headers),

@@ -1,28 +1,39 @@
 import { decryptJson } from "@upzy/crypto";
-import { activeMaintenance, schema, type Db } from "@upzy/db";
+import {
+  activeMaintenance,
+  checkQueue,
+  regionalVerdict,
+  regionsOf,
+  schema,
+  workerRegion,
+  type Db,
+} from "@upzy/db";
 import { runProbe } from "@upzy/probes";
 import { enqueue, work } from "@upzy/queue";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 
 import { evaluate } from "../evaluate";
 import { heartbeatResult } from "../heartbeat";
 import { AI_QUEUE, type AiJob } from "./agent";
 import { CORRELATE_QUEUE, type CorrelateJob } from "./correlator";
 import { NOTIFY_QUEUE, type NotifyJob } from "./notifier";
-import { CHECK_QUEUE, type CheckJob } from "./scheduler";
+import { type CheckJob } from "./scheduler";
 import { STATUS_NOTIFY_QUEUE, type StatusNotifyJob } from "./status-notify";
 
-const REGION = process.env.WORKER_REGION ?? "local";
+const REGION = workerRegion();
 
 /** Runs one check, stores the result, then updates monitor state and opens/resolves incidents. */
 export async function handleCheck(
   db: Db,
-  { monitorId }: CheckJob,
+  { monitorId, region: jobRegion }: CheckJob,
   opts: { encryptionKey?: string; probe?: typeof runProbe; now?: () => Date } = {},
 ) {
-  const { monitors, monitorChecks, incidents } = schema;
+  const { monitors, monitorChecks, monitorRegionState, incidents } = schema;
+  const region = jobRegion ?? REGION;
   const [m] = await db.select().from(monitors).where(eq(monitors.id, monitorId));
   if (!m || !m.active) return;
+  // The monitor was edited after this job was queued, and is no longer checked from here.
+  if (!regionsOf(m).includes(region)) return;
 
   // Secrets are decrypted only for the length of the check and handed to the probe, never stored or logged.
   let secrets: Record<string, string> | undefined;
@@ -51,7 +62,7 @@ export async function handleCheck(
         monitorId: m.id,
         status: result.status,
         responseMs: result.responseMs,
-        region: REGION,
+        region,
         statusCode: result.statusCode,
         error: result.error,
         errorKind: result.errorKind,
@@ -67,6 +78,42 @@ export async function handleCheck(
       .from(incidents)
       .where(and(eq(incidents.monitorId, m.id), ne(incidents.status, "resolved")));
 
+    // A monitor checked from several regions is down when most of them say so, not when one does. The streaks are
+    // kept per region, and the state machine below then sees a single "down" or "up" with the streak already met.
+    let status: "up" | "down" = result.status;
+    let streak = fresh.consecutiveFailures;
+    let where = "";
+    if (fresh.regions.length > 0) {
+      const failed = result.status === "down";
+      await tx
+        .insert(monitorRegionState)
+        .values({
+          monitorId: m.id,
+          region,
+          consecutiveFailures: failed ? 1 : 0,
+          lastStatus: result.status,
+        })
+        .onConflictDoUpdate({
+          target: [monitorRegionState.monitorId, monitorRegionState.region],
+          set: {
+            consecutiveFailures: failed ? sql`${monitorRegionState.consecutiveFailures} + 1` : 0,
+            lastStatus: result.status,
+            lastCheckAt: new Date(),
+          },
+        });
+      const states = (
+        await tx.select().from(monitorRegionState).where(eq(monitorRegionState.monitorId, m.id))
+      ).filter((s) => fresh.regions.includes(s.region));
+      const verdict = regionalVerdict(states, {
+        failureThreshold: fresh.failureThreshold,
+        intervalSeconds: fresh.interval,
+        now: (opts.now ?? (() => new Date()))(),
+      });
+      status = verdict.down ? "down" : "up";
+      streak = verdict.down ? fresh.failureThreshold - 1 : 0;
+      if (verdict.down && verdict.considered > 1) where = ` from ${verdict.failing.join(", ")}`;
+    }
+
     // Up, but slower than the monitor's own latency threshold. Never an incident: it only affects the state shown.
     const slow =
       result.status === "up" &&
@@ -75,13 +122,13 @@ export async function handleCheck(
       result.responseMs > fresh.latencyThresholdMs;
     // Only a failure that is about to open an incident needs to know about maintenance.
     const window =
-      result.status === "down" && !open
+      status === "down" && !open
         ? (await activeMaintenance(tx, [m.id], (opts.now ?? (() => new Date()))())).get(m.id)
         : undefined;
 
     const next = evaluate({
-      resultStatus: result.status,
-      consecutiveFailures: fresh.consecutiveFailures,
+      resultStatus: status,
+      consecutiveFailures: streak,
       failureThreshold: fresh.failureThreshold,
       hasOpenIncident: !!open,
       slow,
@@ -109,7 +156,7 @@ export async function handleCheck(
           monitorId: m.id,
           type: "uptime",
           status: "open",
-          title: `${m.name} is down${result.error ? `: ${result.error}` : ""}`,
+          title: `${m.name} is down${where}${result.error ? `: ${result.error}` : ""}`,
         })
         .returning({ id: incidents.id });
       await enqueue<NotifyJob>(
@@ -179,7 +226,7 @@ export const runProber = (
 ) =>
   work<CheckJob>(
     db,
-    CHECK_QUEUE,
+    checkQueue(REGION),
     (payload) => handleCheck(db, payload, { encryptionKey: opts.encryptionKey }),
     { concurrency: opts.concurrency ?? 20, signal },
   );

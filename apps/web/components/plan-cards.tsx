@@ -11,6 +11,9 @@ export function planFeatures(id: PlanId): string[] {
     `${n(l.monitors)} monitors, checked every ${l.minInterval / 60} min or faster`,
     `${n(l.assets)} ${l.assets === 1 ? "domain" : "domains"} with security scans`,
     `${id === "agency" ? "Many" : n(l.statusPages)} status ${l.statusPages === 1 ? "page" : "pages"}${l.customDomain ? ", on your own domain" : ""}`,
+    ...(l.regions > 1 && id !== "unlimited"
+      ? [`Check each monitor from up to ${l.regions} regions`]
+      : []),
     ...(l.customLogo && id !== "unlimited" ? ["Your client's logo on status pages"] : []),
     ...(l.clientReports && id !== "unlimited" ? ["Scheduled reports emailed to your clients"] : []),
     "Unlimited team members",

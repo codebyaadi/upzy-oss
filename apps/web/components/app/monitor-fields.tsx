@@ -5,6 +5,7 @@ import { Input } from "@upzy/ui/components/input";
 
 import { SelectField } from "@/components/app/select-field";
 import { Field } from "@/components/app/ui";
+import { api } from "@/lib/api";
 import {
   emptyStep,
   type AssertionRow,
@@ -13,6 +14,7 @@ import {
   type SecretRow,
   type StepDraft,
 } from "@/lib/monitor-form";
+import { unwrap, useApi } from "@/lib/use-api";
 
 const AREA =
   "border-input focus-visible:ring-ring w-full resize-y rounded-2xl border bg-transparent px-4 py-3 font-mono text-xs outline-hidden focus-visible:ring-1";
@@ -426,5 +428,59 @@ export function HeartbeatFields({ d, set }: { d: Draft; set: (patch: Partial<Dra
         />
       </Field>
     </div>
+  );
+}
+
+/**
+ * Where to check from. Only shown when the installation has more than one place to offer. Picking none means the
+ * main server; picking several means the monitor counts as down only when most of them agree.
+ */
+export function RegionPicker({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (regions: string[]) => void;
+}) {
+  const offered = useApi("monitor-regions", () => unwrap(api.monitor.regions.get()));
+  const list = offered.data?.regions ?? [];
+  const max = offered.data?.max ?? null;
+  if (list.length < 2) return null;
+  const label = (r: string) => (r === "local" ? "Main server" : r);
+  const toggle = (r: string) =>
+    onChange(value.includes(r) ? value.filter((x) => x !== r) : [...value, r]);
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-semibold">Check from</legend>
+      <div className="flex flex-wrap gap-2">
+        {list.map((r) => {
+          const on = value.includes(r);
+          const full = !on && max !== null && value.length >= max;
+          return (
+            <label
+              key={r}
+              className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${on ? "bg-accent border-transparent font-semibold" : ""} ${full ? "opacity-50" : "cursor-pointer"}`}
+            >
+              <input
+                type="checkbox"
+                className="size-4"
+                checked={on}
+                disabled={full}
+                onChange={() => toggle(r)}
+              />
+              {label(r)}
+            </label>
+          );
+        })}
+      </div>
+      <p className="text-muted-foreground text-xs">
+        {value.length === 0
+          ? "Nothing selected: checked from the main server."
+          : value.length === 1
+            ? "Checked from one place."
+            : "Down only when most of these places can't reach it, so one region's network trouble doesn't wake you up."}
+        {max !== null && ` Your plan allows ${max} at once.`}
+      </p>
+    </fieldset>
   );
 }

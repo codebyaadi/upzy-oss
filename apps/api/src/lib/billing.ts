@@ -7,6 +7,7 @@ import {
   intervalMessage,
   limitMessage,
   customLogoMessage,
+  regionsMessage,
   loadBillingConfig,
   type BillingConfig,
   type DodoClient,
@@ -101,6 +102,13 @@ export function createBilling(deps: BillingDeps = { config: loadBillingConfig(pr
     if (interval < min) throw new HttpError(402, intervalMessage(ent.plan, min));
   }
 
+  /** Refuses (402) when a monitor would be checked from more places than the plan includes. */
+  async function assertRegions(db: Db, orgId: string, places: number) {
+    const { ent } = await entitlementFor(db, orgId);
+    const max = PLANS[ent.plan].limits.regions;
+    if (places > max) throw new HttpError(402, regionsMessage(ent.plan, max));
+  }
+
   async function assertCustomDomain(db: Db, orgId: string) {
     const { ent } = await entitlementFor(db, orgId);
     if (!PLANS[ent.plan].limits.customDomain)
@@ -127,6 +135,7 @@ export function createBilling(deps: BillingDeps = { config: loadBillingConfig(pr
     usage,
     assertCanCreate,
     assertInterval,
+    assertRegions,
     assertCustomDomain,
     assertCustomLogo,
     customLogoAllowed,

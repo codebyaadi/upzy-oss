@@ -104,6 +104,31 @@ export default function MonitorDetailPage() {
             {m.secretNames.length > 0 &&
               ` · ${m.secretNames.length} secret${m.secretNames.length === 1 ? "" : "s"} (${m.secretNames.join(", ")})`}
           </p>
+          {m.regions.length > 0 && (
+            <ul className="mt-3 flex flex-wrap gap-2" aria-label="Status from each region">
+              {m.regions.map((r) => {
+                const st = m.regionStates.find((x) => x.region === r);
+                const tone =
+                  st?.status === "down"
+                    ? "bg-destructive"
+                    : st?.status === "up"
+                      ? "bg-brand"
+                      : "bg-muted-foreground/50";
+                return (
+                  <li
+                    key={r}
+                    className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
+                  >
+                    <span aria-hidden className={cn("size-2 rounded-full", tone)} />
+                    <span className="font-semibold">{r === "local" ? "Main server" : r}</span>
+                    <span className="text-muted-foreground">
+                      {st ? (st.status === "unknown" ? "waiting" : st.status) : "no check yet"}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
         <div className="flex gap-2">
           <Can min="member">
@@ -230,6 +255,11 @@ export default function MonitorDetailPage() {
                   {c.status === "up" ? "Up" : "Down"}
                   {c.statusCode ? (
                     <span className="text-muted-foreground font-normal">HTTP {c.statusCode}</span>
+                  ) : null}
+                  {m.regions.length > 0 && c.region ? (
+                    <span className="text-muted-foreground font-normal">
+                      {c.region === "local" ? "main" : c.region}
+                    </span>
                   ) : null}
                 </span>
                 <span className="text-muted-foreground min-w-0 truncate text-right">

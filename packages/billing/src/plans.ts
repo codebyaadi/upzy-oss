@@ -14,6 +14,8 @@ export interface Limits {
   customLogo: boolean;
   /** Scheduled uptime and security reports emailed to a client. */
   clientReports: boolean;
+  /** How many places one monitor can be checked from at once. */
+  regions: number;
 }
 
 export interface Plan {
@@ -43,6 +45,7 @@ export const PLANS: Record<PlanId, Plan> = {
       customDomain: false,
       customLogo: false,
       clientReports: false,
+      regions: 1,
     },
   },
   starter: {
@@ -58,6 +61,7 @@ export const PLANS: Record<PlanId, Plan> = {
       customDomain: true,
       customLogo: false,
       clientReports: false,
+      regions: 2,
     },
   },
   pro: {
@@ -73,6 +77,7 @@ export const PLANS: Record<PlanId, Plan> = {
       customDomain: true,
       customLogo: false,
       clientReports: false,
+      regions: 3,
     },
   },
   agency: {
@@ -88,6 +93,7 @@ export const PLANS: Record<PlanId, Plan> = {
       customDomain: true,
       customLogo: true,
       clientReports: true,
+      regions: 5,
     },
   },
   // Not for sale: what everyone gets while billing is switched off (self-hosting, early access).
@@ -104,6 +110,7 @@ export const PLANS: Record<PlanId, Plan> = {
       customDomain: true,
       customLogo: true,
       clientReports: true,
+      regions: Infinity,
     },
   },
 };
@@ -136,3 +143,6 @@ export const customLogoMessage = (plan: PlanId) =>
 
 export const clientReportsMessage = (plan: PlanId) =>
   `Scheduled client reports aren't included in the ${PLANS[plan].name} plan. Upgrade to Agency under Settings → Billing.`;
+
+export const regionsMessage = (plan: PlanId, max: number) =>
+  `The ${PLANS[plan].name} plan checks each monitor from ${max} ${max === 1 ? "place" : "places"} at most. Upgrade under Settings → Billing to check from more.`;

@@ -52,11 +52,15 @@ export const MonitorConfigSchema = z
     }
   });
 
+const RegionsSchema = z.array(z.string().regex(/^[a-z0-9][a-z0-9-]{1,23}$/)).max(8);
+
 const BaseMonitorSchema = {
   config: MonitorConfigSchema.default({}),
   /** Write-only values used as {{secret.NAME}} in headers, body and addresses. Stored encrypted. */
   secrets: SecretsSchema.default({}),
   failureThreshold: z.number().int().min(1).max(10).default(2),
+  /** Where to check from, by name. Empty means the main server only. */
+  regions: RegionsSchema.default([]),
   latencyThresholdMs: z.number().int().min(50).max(60_000).optional(),
   workspaceId: z.uuid(),
   name: z
@@ -192,6 +196,8 @@ export const UpdateMonitorSchema = z.object({
   /** Omit to leave secrets alone. Names missing from the object are removed; null keeps the stored value. */
   secrets: SecretsUpdateSchema.optional(),
   failureThreshold: z.number().int().min(1).max(10).optional(),
+  // No default here: leaving it out must leave the regions alone.
+  regions: RegionsSchema.optional(),
   latencyThresholdMs: BaseMonitorSchema.latencyThresholdMs.nullable(),
 });
 

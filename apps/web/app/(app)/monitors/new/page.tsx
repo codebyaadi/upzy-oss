@@ -7,7 +7,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ViewOnlyNote } from "@/components/app/can";
-import { FlowSteps, HeartbeatFields, HttpOptions } from "@/components/app/monitor-fields";
+import {
+  FlowSteps,
+  HeartbeatFields,
+  HttpOptions,
+  RegionPicker,
+} from "@/components/app/monitor-fields";
 import { SelectField } from "@/components/app/select-field";
 import { BackLink, Field, PageHeader, Panel } from "@/components/app/ui";
 import { useWorkspace } from "@/components/app/workspace";
@@ -113,6 +118,7 @@ export default function NewMonitorPage() {
         ...(d.type === "flow" || d.type === "heartbeat" ? {} : { target: d.target.trim() }),
         interval: d.type === "heartbeat" ? 60 : Number(d.every),
         failureThreshold: d.type === "heartbeat" ? 1 : Number(d.threshold),
+        ...(d.type !== "heartbeat" ? { regions: d.regions } : {}),
         ...(d.type !== "heartbeat" && d.slowMs.trim()
           ? { latencyThresholdMs: Number(d.slowMs) }
           : {}),
@@ -295,6 +301,9 @@ export default function NewMonitorPage() {
                 />
               </Field>
             </div>
+          )}
+          {d.type !== "heartbeat" && (
+            <RegionPicker value={d.regions} onChange={(regions) => set({ regions })} />
           )}
           <Button type="submit" size="lg" className="w-full" loading={busy}>
             Create monitor
