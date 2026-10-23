@@ -1,2 +1,36 @@
 @import "tailwindcss";
 @import "@upzy/ui/globals.css";
+
+/* In-page links (#features) stop below the floating navigation. */
+html {
+  scroll-padding-top: 5.5rem;
+}
+
+/*
+ * Scroll areas inside the app (the sidebar's menu): still scrollable, but no chunky default scrollbar. The thin
+ * bar only shows while you hover the area, in the theme's own colours.
+ */
+.scroll-quiet {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scroll-quiet:hover {
+  scrollbar-color: color-mix(in oklab, var(--foreground) 22%, transparent) transparent;
+}
+.scroll-quiet::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-quiet::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+.scroll-quiet:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--foreground) 22%, transparent);
+}
+/* The folded icon rail has no room for one at all. */
+.scroll-hidden {
+  scrollbar-width: none;
+}
+.scroll-hidden::-webkit-scrollbar {
+  display: none;
+}

@@ -347,7 +347,13 @@ export function Shell({
           </Button>
         )}
         {!collapsed && <div className="mt-4">{workspacePicker("h-10 w-full")}</div>}
-        <nav aria-label="Main" className="mt-4 flex flex-1 flex-col gap-4 overflow-y-auto">
+        <nav
+          aria-label="Main"
+          className={cn(
+            "mt-4 flex flex-1 flex-col gap-4 overflow-y-auto",
+            collapsed ? "scroll-hidden" : "scroll-quiet -mr-2 pr-2",
+          )}
+        >
           {groups.map((g) => {
             const shown = g.items.filter((n) => !n.min || can(n.min));
             if (shown.length === 0) return null;

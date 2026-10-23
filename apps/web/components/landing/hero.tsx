@@ -15,7 +15,7 @@ const rows = [
 
 export function Hero() {
   return (
-    <section className="px-4 pt-16 pb-16 sm:pt-24">
+    <section className="px-4 pt-32 pb-16 sm:pt-40">
       <div className="animate-in fade-in slide-in-from-bottom-4 mx-auto max-w-5xl text-center duration-700">
         <div className="mb-7 flex justify-center">
           <BuiltBy />

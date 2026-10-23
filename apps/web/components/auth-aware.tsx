@@ -68,7 +68,7 @@ export function NavActions() {
   return (
     <div className={`flex items-center gap-1 ${pending ? "invisible" : ""}`}>
       {!signedIn && (
-        <ButtonLink variant="ghost" size="sm" href="/login">
+        <ButtonLink variant="ghost" size="sm" href="/login" className="hidden sm:inline-flex">
           Sign in
         </ButtonLink>
       )}

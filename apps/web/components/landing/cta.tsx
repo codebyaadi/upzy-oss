@@ -1,7 +1,4 @@
-import Link from "next/link";
-
 import { PrimaryCta } from "@/components/auth-aware";
-import { Logo } from "@/components/logo";
 
 export function Cta() {
   return (
@@ -15,41 +12,6 @@ export function Cta() {
         </p>
         <PrimaryCta size="lg" className="mt-8" />
       </div>
-      <footer className="text-muted-foreground mx-auto mt-16 flex max-w-5xl flex-col items-center justify-between gap-5 text-xs sm:flex-row">
-        <Logo />
-        <nav aria-label="Legal" className="flex flex-wrap justify-center gap-x-5 gap-y-2">
-          <a
-            href="https://github.com/codebyaadi/upzy-oss"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-foreground underline underline-offset-4"
-          >
-            Open source on GitHub
-          </a>
-          <Link href="/tools" className="hover:text-foreground underline underline-offset-4">
-            Free tools
-          </Link>
-          <Link href="/pricing" className="hover:text-foreground underline underline-offset-4">
-            Pricing
-          </Link>
-          <Link href="/terms" className="hover:text-foreground underline underline-offset-4">
-            Terms
-          </Link>
-          <Link href="/privacy" className="hover:text-foreground underline underline-offset-4">
-            Privacy
-          </Link>
-          <Link
-            href="/acceptable-use"
-            className="hover:text-foreground underline underline-offset-4"
-          >
-            Acceptable use
-          </Link>
-          <Link href="/ai-data" className="hover:text-foreground underline underline-offset-4">
-            AI data use
-          </Link>
-        </nav>
-        <p>&copy; {new Date().getFullYear()} Upzy. Press d to toggle dark mode.</p>
-      </footer>
     </section>
   );
 }
