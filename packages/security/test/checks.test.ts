@@ -41,6 +41,8 @@ const deps = (over: Partial<Deps> = {}): Deps => ({
   resolveAddresses: async () => ["93.184.216.34"],
   resolveCaa: async () => [{}],
   tls: async () => goodTls,
+  tlsLegacy: async () => false,
+  tcpOpen: async () => false,
   vuln: { http: async () => ({}), cache: memoryCache() },
   ...over,
 });

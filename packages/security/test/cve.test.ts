@@ -362,6 +362,8 @@ describe("cve check", () => {
     resolveCname: async () => [],
     resolveAddresses: async () => ["1.2.3.4"],
     resolveCaa: async () => [{}],
+    tlsLegacy: async () => false,
+    tcpOpen: async () => false,
     tls: async () => ({
       protocol: "TLSv1.3",
       authorized: true,

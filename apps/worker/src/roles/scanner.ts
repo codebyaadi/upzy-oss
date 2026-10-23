@@ -3,7 +3,7 @@ import { enqueue, work } from "@upzy/queue";
 import {
   defaultDeps,
   fingerprint,
-  PASSIVE_CHECKS,
+  ALL_CHECKS,
   recordHealth,
   riskScore,
   runChecks,
@@ -171,7 +171,10 @@ export async function handleScan(
     .returning();
 
   try {
-    const result = await runChecks({ kind: asset.kind, value: asset.value }, { deps });
+    const result = await runChecks(
+      { kind: asset.kind, value: asset.value },
+      { deps, verified: asset.verified },
+    );
     await applyScanResult(db, scan!, result);
     await db.update(assets).set({ lastScanAt: new Date() }).where(eq(assets.id, assetId));
     // The trend is a nicety: never fail a scan over it.
@@ -208,7 +211,7 @@ export async function handleVerify(db: Db, { findingId }: VerifyJob, deps: Deps 
       .set({ verifyStatus: "failed", verifyError: message })
       .where(eq(findings.id, findingId));
 
-  const checks = PASSIVE_CHECKS.filter((c) => c.family === family);
+  const checks = ALL_CHECKS.filter((c) => c.family === family);
   if (checks.length === 0)
     return void (await fail("This kind of finding can't be re-checked on demand."));
 
@@ -225,7 +228,7 @@ export async function handleVerify(db: Db, { findingId }: VerifyJob, deps: Deps 
   try {
     const result = await runChecks(
       { kind: row.asset.kind, value: row.asset.value },
-      { deps, checks },
+      { deps, checks, verified: row.asset.verified },
     );
     if (result.outcomes[family] !== "ok") {
       await db

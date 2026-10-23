@@ -1,10 +1,13 @@
 import { BlockedTargetError } from "@upzy/probes";
 
+import { exposedPathsCheck, portsCheck } from "./checks/active";
 import { cveCheck } from "./checks/cve";
 import { caaCheck, takeoverCheck } from "./checks/dns";
 import { emailCheck } from "./checks/email-auth";
 import { headersCheck } from "./checks/headers";
-import { tlsCheck } from "./checks/tls";
+import { registrationCheck, dnssecCheck } from "./checks/registration";
+import { reputationCheck } from "./checks/reputation";
+import { tlsCheck, tlsLegacyCheck } from "./checks/tls";
 import { defaultDeps } from "./deps";
 import { detectStack, type Stack } from "./stack";
 import type { AssetRef, Check, CheckContext, Deps, FindingDraft } from "./types";
@@ -12,11 +15,20 @@ import type { AssetRef, Check, CheckContext, Deps, FindingDraft } from "./types"
 export const PASSIVE_CHECKS: Check[] = [
   headersCheck,
   tlsCheck,
+  tlsLegacyCheck,
   emailCheck,
   caaCheck,
   takeoverCheck,
   cveCheck,
+  registrationCheck,
+  dnssecCheck,
+  reputationCheck,
 ];
+
+/** Checks that probe paths and ports. They run only for assets whose ownership has been verified. */
+export const ACTIVE_CHECKS: Check[] = [exposedPathsCheck, portsCheck];
+
+export const ALL_CHECKS: Check[] = [...PASSIVE_CHECKS, ...ACTIVE_CHECKS];
 
 export type Outcome = "ok" | "error" | "skipped";
 
@@ -64,7 +76,7 @@ const withTimeout = <T>(p: Promise<T>, ms: number, family: string) =>
  */
 export async function runChecks(
   asset: AssetRef,
-  opts: { deps?: Deps; checks?: Check[]; timeoutMs?: number } = {},
+  opts: { deps?: Deps; checks?: Check[]; timeoutMs?: number; verified?: boolean } = {},
 ): Promise<ScanResult> {
   const ctx = contextFor(asset, opts.deps);
   const result: ScanResult = { findings: [], outcomes: {}, errors: {} };
@@ -76,8 +88,8 @@ export async function runChecks(
     .catch(() => undefined);
 
   await Promise.all(
-    (opts.checks ?? PASSIVE_CHECKS).map(async (check) => {
-      if (!check.appliesTo.includes(asset.kind)) {
+    (opts.checks ?? (opts.verified ? ALL_CHECKS : PASSIVE_CHECKS)).map(async (check) => {
+      if (!check.appliesTo.includes(asset.kind) || (check.active && !opts.verified)) {
         result.outcomes[check.family] = "skipped";
         return;
       }

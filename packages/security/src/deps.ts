@@ -1,4 +1,5 @@
 import dns from "node:dns/promises";
+import { connect as tcpConnect } from "node:net";
 import { connect } from "node:tls";
 
 import { resolvePublic, safeFetch } from "@upzy/probes";
@@ -52,6 +53,48 @@ async function tlsInfo(host: string): Promise<TlsInfo> {
   });
 }
 
+/** Offers only one old protocol version. A handshake error means "not accepted"; a timeout means "can't tell". */
+async function tlsLegacy(host: string, version: "TLSv1" | "TLSv1.1"): Promise<boolean> {
+  const { address } = await resolvePublic(host);
+  return new Promise((ok, bad) => {
+    const socket = connect({
+      host: address,
+      port: 443,
+      servername: host,
+      rejectUnauthorized: false,
+      minVersion: version,
+      maxVersion: version,
+      timeout: 10_000,
+    });
+    socket.once("secureConnect", () => (socket.destroy(), ok(true)));
+    socket.once(
+      "timeout",
+      () => (
+        socket.destroy(),
+        bad(Object.assign(new Error("TLS connection timed out"), { code: "ETIMEDOUT" }))
+      ),
+    );
+    socket.once(
+      "error",
+      (e: Error) => (
+        socket.destroy(),
+        (e as { code?: string }).code === "ETIMEDOUT" ? bad(e) : ok(false)
+      ),
+    );
+  });
+}
+
+async function tcpOpen(host: string, port: number): Promise<boolean> {
+  const { address } = await resolvePublic(host);
+  return new Promise((ok) => {
+    const socket = tcpConnect({ host: address, port, timeout: 3_000 });
+    const done = (open: boolean) => (socket.destroy(), ok(open));
+    socket.once("connect", () => done(true));
+    socket.once("timeout", () => done(false));
+    socket.once("error", () => done(false));
+  });
+}
+
 export const defaultDeps: Deps = {
   fetch: (url, opts) => safeFetch(url, { timeoutMs: 10_000, ...opts }),
   resolveTxt: (h) => orEmpty(dns.resolveTxt(h)),
@@ -61,5 +104,8 @@ export const defaultDeps: Deps = {
     (await Promise.all([orEmpty(dns.resolve4(h)), orEmpty(dns.resolve6(h))])).flat(),
   resolveCaa: (h) => orEmpty(dns.resolveCaa(h)),
   tls: tlsInfo,
+  tlsLegacy,
+  tcpOpen,
+  safeBrowsingKey: process.env.GOOGLE_SAFE_BROWSING_KEY || undefined,
   vuln: { http: httpJson, cache: memoryCache(), nvdApiKey: process.env.NVD_API_KEY },
 };

@@ -28,7 +28,13 @@ export const PENALTY: Record<Severity, number> = {
 const WEIGHT: Record<Category, number> = { security: 50, availability: 20, email: 20, hygiene: 10 };
 
 /** Expiry, CAA and version banners are housekeeping; everything else about the site itself is security. */
-const HYGIENE = new Set(["tls.cert_expiring", "dns.caa_missing", "headers.version_disclosed"]);
+const HYGIENE = new Set([
+  "tls.cert_expiring",
+  "dns.caa_missing",
+  "headers.version_disclosed",
+  "registration.expiring",
+  "dnssec.not_enabled",
+]);
 
 export function categoryOf(checkKey: string): Category {
   if (checkKey.startsWith("email.")) return "email";

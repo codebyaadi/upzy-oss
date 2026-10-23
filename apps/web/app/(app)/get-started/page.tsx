@@ -258,8 +258,9 @@ export default function GetStartedPage() {
                 <Step done={false} title="Prove you own it (optional)">
                   <div className="space-y-3">
                     <p>
-                      Passive checks work without this. Verifying unlocks deeper checks later and
-                      auto-verifies your subdomains. Add this DNS record, then check:
+                      Passive checks work without this. Verifying turns on deeper checks (exposed
+                      files, open ports) and auto-verifies your subdomains. Add this DNS record,
+                      then check:
                     </p>
                     <p>
                       <code className="font-mono">{started.verification.dns.type}</code> record on{" "}

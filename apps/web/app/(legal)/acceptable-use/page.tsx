@@ -20,14 +20,15 @@ export default function AcceptableUse() {
         <P>
           Add only domains, subdomains and URLs that you own, or that the owner has agreed in
           writing that you may monitor and security-scan. Upzy asks you to prove ownership of
-          domains by a DNS record or a file, and unlocks nothing beyond passive checks without it,
-          but proving ownership doesn&apos;t make it acceptable to add things you have no right to.
+          domains by a DNS record or a file, and runs only passive checks without it, but proving
+          ownership doesn&apos;t make it acceptable to add things you have no right to.
         </P>
       </Section>
 
       <Section title="What Upzy actually does to a target">
         <P>
-          Everything below is passive: it looks at what any visitor or resolver can already see.
+          Apart from the deeper checks described below, which need verified ownership, everything is
+          passive: it looks at what any visitor or resolver can already see.
         </P>
         <UL>
           <li>
@@ -46,8 +47,17 @@ export default function AcceptableUse() {
           <li>
             <strong>Security scans</strong> run about once a day per asset: one anonymous page
             request (headers, cookies, redirects), one plain-HTTP request to see whether it upgrades
-            to HTTPS, a TLS handshake, DNS lookups (SPF, DMARC, CAA, CNAMEs) and lookups of public
-            vulnerability data about the software the site reveals.
+            to HTTPS, TLS handshakes (including whether the oldest protocol versions are still
+            accepted), DNS lookups (SPF, DMARC, CAA, CNAMEs, DNSSEC), the domain&apos;s public
+            registration record, and lookups of public vulnerability data about the software the
+            site reveals.
+          </li>
+          <li>
+            <strong>Deeper checks</strong> run only on assets whose ownership you have proved by DNS
+            record or file. They request a short list of well-known paths that should never be
+            public (such as /.env and /.git/HEAD) and test whether about a dozen risky service ports
+            (databases, remote desktop, Telnet) accept a connection. They connect and read nothing
+            further, and they never save what a file contained, only that it was reachable.
           </li>
           <li>
             <strong>Subdomain discovery</strong> reads public certificate transparency logs. Hosts
@@ -55,9 +65,9 @@ export default function AcceptableUse() {
           </li>
         </UL>
         <P>
-          Upzy does not try to log in, guess passwords or paths, exploit vulnerabilities, scan ports
-          or send payloads designed to trigger flaws. Requests come from our servers and identify
-          themselves as{" "}
+          Upzy does not try to log in, guess passwords, exploit vulnerabilities or send payloads
+          designed to trigger flaws, and it does not scan ports or probe paths on sites you have not
+          verified. Requests come from our servers and identify themselves as{" "}
           <a href="/bot" className="underline underline-offset-4">
             UpzyBot
           </a>

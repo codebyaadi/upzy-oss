@@ -290,7 +290,8 @@ export default function AssetsPage() {
                       Check now
                     </Button>
                     <p className="text-muted-foreground text-xs">
-                      Verification unlocks deeper checks later. Passive scans work without it.
+                      Verification turns on deeper checks: exposed files and open database or
+                      remote-access ports. Passive scans work without it.
                     </p>
                   </div>
                 )}

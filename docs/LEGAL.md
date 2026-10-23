@@ -35,7 +35,7 @@ The pages describe what the software really does, and must be kept true when it 
 - Monitor check history is deleted after 90 days (`CHECK_RETENTION_DAYS`); keep the Privacy Policy line in step if you change it.
 - Backups expire after 30 days; status page subscribers who never confirm are removed after 7 days.
 - No analytics or advertising cookies; one session cookie, a sidebar preference and local storage for the selected workspace and theme.
-- Scans are passive: no logins, no guessing, no port scans, no exploitation. If active checks are ever added, update Acceptable Use, UpzyBot and the Terms first.
+- Scans are passive unless the asset has verified ownership. Verified assets also get active checks: a fixed list of well-known paths and about a dozen risky TCP ports; no logins, no password guessing, no exploitation. Acceptable Use, UpzyBot and the README describe this; update them with any new active check. Google Safe Browsing (optional) receives scanned addresses.
 - Subprocessors named in the Privacy Policy: AWS, the email delivery provider, Dodo Payments (only for people who buy a plan), Let's Encrypt, public data sources, and the customer's AI provider. Add any new one there.
 
 There is no self-service account or organization deletion yet, so the Privacy Policy tells people to write to the contact address; deleting an organization cascades to its data.

@@ -2,6 +2,8 @@ export * from "./types";
 export { defaultDeps } from "./deps";
 export {
   PASSIVE_CHECKS,
+  ACTIVE_CHECKS,
+  ALL_CHECKS,
   runChecks,
   contextFor,
   hostOf,

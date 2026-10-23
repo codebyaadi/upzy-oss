@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = pageMetadata({
   title: "UpzyBot",
   description:
-    "UpzyBot: the user agent Upzy's monitors and passive security checks identify themselves with, and how to contact us.",
+    "UpzyBot: the user agent Upzy's monitors and security checks identify themselves with, and how to contact us.",
   path: "/bot",
 });
 
@@ -42,10 +42,12 @@ export default function Bot() {
           </li>
         </UL>
         <P>
-          Its scans never log in, guess passwords or paths, scan ports or try to exploit anything. A
-          monitor the site's owner set up may send the headers, body or login steps that owner
-          configured for their own service, and nothing else. It follows redirects a few hops and
-          does not run JavaScript.
+          Its scans never log in, guess passwords or try to exploit anything. On sites whose owner
+          has verified ownership, they also request a short fixed list of well-known paths (such as
+          /.env and /.git/HEAD) and check whether common database and remote-access ports accept a
+          connection. A monitor the site's owner set up may send the headers, body or login steps
+          that owner configured for their own service, and nothing else. It follows redirects a few
+          hops and does not run JavaScript.
         </P>
       </Section>
 

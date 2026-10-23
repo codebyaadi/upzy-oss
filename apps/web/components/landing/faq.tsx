@@ -29,7 +29,7 @@ export const faqItems = [
   },
   {
     q: "Will you scan sites I don't own?",
-    a: "Only passive checks, which look at what any visitor can already see. Anything more intrusive requires you to prove you own the domain first.",
+    a: "Passive checks, which look at what any visitor can already see. Deeper checks (looking for exposed files such as .env and for open database ports) run only after you prove you own the domain.",
   },
   {
     q: "What does the AI actually do?",

@@ -16,7 +16,7 @@ Small teams usually run two tools: a cheap uptime pinger, and (if they can affor
 Upzy puts both in one place and keeps the output readable:
 
 - **Know first.** Checks run every minute. An outage opens one incident after repeated failures (so a blip doesn't page you), alerts you where you already work, and closes itself when the site recovers.
-- **See what you expose.** Passive scans of your domains: certificates, security headers, email authentication, dangling DNS, forgotten subdomains and known CVEs for the software you run, ranked by real-world risk.
+- **See what you expose.** Scans of your domains: certificates and old TLS versions, security headers, email authentication, DNSSEC, domain expiry, dangling DNS, forgotten subdomains and known CVEs for the software you run, ranked by real-world risk. For domains you verify: exposed files and open database ports. Optional Google Safe Browsing check.
 - **Get the fix, not a report.** Every finding comes with the change to make for _your_ stack (nginx, Apache, Caddy, Cloudflare, Vercel and more), and a **Verify fix** button re-checks it right away.
 - **Stay in control.** AI is opt-in, runs on _your_ provider key, and only ever drafts or explains. Nothing changes without a person confirming it.
 
@@ -58,7 +58,7 @@ Upzy puts both in one place and keeps the output readable:
 ## Built with care
 
 - **Targets are public only.** Monitors and scans refuse loopback, private, link-local and metadata addresses. The address is resolved and pinned at connect time, so DNS rebinding can't swap it afterwards.
-- **Scans are passive.** They look only at what any visitor can see: no logins, no guessing, no port scans, no exploitation. Discovered subdomains are never scanned until you accept them.
+- **Scans are passive until you prove ownership.** Without it they look only at what any visitor can see: no logins, no guessing, no port scans, no exploitation. Once a domain is verified (DNS record or file), scans also request a short fixed list of paths that should never be public (`/.env`, `/.git/HEAD`, database dumps) and test whether about a dozen risky ports (databases, RDP, Telnet) accept a connection. Findings record where, never what was read. Discovered subdomains are never scanned until you accept them.
 - **Secrets are encrypted at rest** with AES-256-GCM, never shown again after you save them, and outgoing webhooks are signed.
 - **AI is fenced in.** Inputs are redacted and wrapped as untrusted data, output is schema-validated, each organization has a daily token budget, and the AI has no write access. Alerting never depends on it.
 - **Roles are enforced by the API** (viewer, member, admin, owner), with an audit log of every change, including refused attempts, and CSV export.
@@ -102,7 +102,7 @@ bun run dev
 | API           | http://localhost:3000 (`/health`) |
 | Mailpit inbox | http://localhost:8025             |
 
-Sign up in the web app, name your team, and use **Get started** with a website you own: Upzy creates an uptime monitor and a certificate monitor, runs a passive scan and gives the site a grade within about a minute. Email goes to Mailpit, so any address works locally.
+Sign up in the web app, name your team, and use **Get started** with a website you own: Upzy creates an uptime monitor and a certificate monitor, runs a security scan and gives the site a grade within about a minute. Email goes to Mailpit, so any address works locally.
 
 ### Sign in with GitHub (optional)
 

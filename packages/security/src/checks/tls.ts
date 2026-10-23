@@ -100,3 +100,32 @@ export const tlsCheck: Check = {
     return out;
   },
 };
+
+/** Offers TLS 1.0 and 1.1 on their own, because the normal handshake only shows the best version both sides share. */
+export const tlsLegacyCheck: Check = {
+  family: "tls",
+  appliesTo: ["domain", "subdomain", "url"],
+  async run({ host, deps }) {
+    const out: FindingDraft[] = [];
+    try {
+      const accepted: string[] = [];
+      for (const v of ["TLSv1", "TLSv1.1"] as const)
+        if (await deps.tlsLegacy(host, v)) accepted.push(v);
+      if (accepted.length > 0)
+        out.push({
+          checkKey: "tls.legacy_protocol_enabled",
+          severity: "medium",
+          title: `Server still accepts ${accepted.map((v) => v.replace("TLSv", "TLS ")).join(" and ")}`,
+          description:
+            "TLS 1.0 and 1.1 have known weaknesses and were retired by every major browser. A server that still accepts them can be pushed onto them by an attacker.",
+          remediation:
+            "Allow only TLS 1.2 and 1.3 in your web server, load balancer or CDN settings.",
+          evidence: { protocols: accepted },
+        });
+    } catch (e) {
+      // Nothing on 443 is reported by the main TLS check. Anything else is inconclusive.
+      if ((e as { code?: string }).code !== "ECONNREFUSED") throw e;
+    }
+    return out;
+  },
+};

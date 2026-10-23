@@ -38,6 +38,12 @@ export interface Deps {
   resolveAddresses: (host: string) => Promise<string[]>;
   resolveCaa: (host: string) => Promise<unknown[]>;
   tls: (host: string) => Promise<TlsInfo>;
+  /** Whether the server completes a handshake when the client offers only this old protocol version. */
+  tlsLegacy: (host: string, version: "TLSv1" | "TLSv1.1") => Promise<boolean>;
+  /** Whether a TCP connection to this port of the host's public address succeeds. */
+  tcpOpen: (host: string, port: number) => Promise<boolean>;
+  /** Google Safe Browsing key. The reputation check does nothing without it. */
+  safeBrowsingKey?: string;
   vuln: VulnDeps;
 }
 
@@ -58,6 +64,8 @@ export interface CheckContext {
 export interface Check {
   family: string;
   appliesTo: readonly AssetKind[];
+  /** Sends more than a normal visit would (probing paths and ports), so it runs only for verified assets. */
+  active?: boolean;
   /** Overrides the scan-wide per-check timeout (slow, rate-limited lookups need longer). */
   timeoutMs?: number;
   run(ctx: CheckContext): Promise<FindingDraft[]>;

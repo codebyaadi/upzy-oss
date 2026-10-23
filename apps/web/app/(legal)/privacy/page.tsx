@@ -125,8 +125,10 @@ export default function Privacy() {
           <li>
             <strong>Public data sources</strong> we query while scanning, such as certificate
             transparency logs (crt.sh), vulnerability databases (NVD, OSV), CISA&apos;s exploited
-            vulnerabilities list, EPSS and DNS resolvers. They receive hostnames and software names
-            and versions that are already public, never your account data.
+            vulnerabilities list, EPSS, DNS resolvers, public registration records (RDAP), and a
+            public DNS-over-HTTPS resolver for DNSSEC checks. If the operator enables it, Google
+            Safe Browsing also receives the address being scanned. They receive hostnames and
+            software names and versions that are already public, never your account data.
           </li>
           <li>
             <strong>Your AI provider,</strong> only if you turn AI on, using your own key and
