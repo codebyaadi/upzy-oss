@@ -7,6 +7,7 @@ import {
   intervalMessage,
   limitMessage,
   customLogoMessage,
+  ssoMessage,
   regionsMessage,
   browserMonitorsMessage,
   loadBillingConfig,
@@ -110,6 +111,12 @@ export function createBilling(deps: BillingDeps = { config: loadBillingConfig(pr
     if (places > max) throw new HttpError(402, regionsMessage(ent.plan, max));
   }
 
+  /** Refuses (402) when the plan doesn't include single sign-on. */
+  async function assertSso(db: Db, orgId: string) {
+    const { ent } = await entitlementFor(db, orgId);
+    if (!PLANS[ent.plan].limits.sso) throw new HttpError(402, ssoMessage(ent.plan));
+  }
+
   /** Refuses (402) when one more browser monitor would pass the plan's limit. */
   async function assertBrowserMonitor(db: Db, orgId: string) {
     const { ent } = await entitlementFor(db, orgId);
@@ -155,6 +162,7 @@ export function createBilling(deps: BillingDeps = { config: loadBillingConfig(pr
     assertInterval,
     assertRegions,
     assertBrowserMonitor,
+    assertSso,
     assertCustomDomain,
     assertCustomLogo,
     customLogoAllowed,

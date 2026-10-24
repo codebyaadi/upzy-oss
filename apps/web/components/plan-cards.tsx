@@ -19,6 +19,7 @@ export function planFeatures(id: PlanId): string[] {
       : []),
     ...(l.customLogo && id !== "unlimited" ? ["Your client's logo on status pages"] : []),
     ...(l.clientReports && id !== "unlimited" ? ["Scheduled reports emailed to your clients"] : []),
+    ...(l.sso && id !== "unlimited" ? ["Single sign-on with your identity provider"] : []),
     "Unlimited team members",
     "Health score and fix instructions",
     "AI help on your own provider key",

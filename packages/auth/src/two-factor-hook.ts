@@ -1,4 +1,4 @@
-import { orgRequiresTwoFactor, type Db } from "@upzy/db";
+import { twoFactorMissing, type Db } from "@upzy/db";
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 
 /**
@@ -21,12 +21,12 @@ export const twoFactorHook = (db: Db) =>
   createAuthMiddleware(async (ctx) => {
     if (!GUARDED.has(ctx.path)) return;
     const session = await getSessionFromCtx(ctx).catch(() => null);
-    if (!session || session.user.twoFactorEnabled) return;
+    if (!session) return;
     const body = (ctx.body ?? {}) as { organizationId?: unknown };
     const orgId =
       typeof body.organizationId === "string"
         ? body.organizationId
         : session.session.activeOrganizationId;
-    if (orgId && (await orgRequiresTwoFactor(db, orgId)))
+    if (orgId && (await twoFactorMissing(db, session.user, orgId)))
       throw new APIError("FORBIDDEN", { message: TWO_FACTOR_REQUIRED });
   });

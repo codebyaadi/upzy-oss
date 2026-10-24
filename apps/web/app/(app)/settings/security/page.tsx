@@ -3,6 +3,7 @@
 import { Switch } from "@upzy/ui/components/switch";
 
 import { ViewOnlyNote } from "@/components/app/can";
+import { SsoPanel } from "@/components/app/sso-panel";
 import { TwoFactorSetup } from "@/components/app/two-factor-setup";
 import { ErrorNote, PageHeader, Panel } from "@/components/app/ui";
 import { useWorkspace } from "@/components/app/workspace";
@@ -48,6 +49,8 @@ export default function SecurityPage() {
             <TwoFactorSetup onChange={() => void Promise.all([policy.mutate(), status.mutate()])} />
           </div>
         </Panel>
+
+        {can("admin") && <SsoPanel orgId={orgId} />}
 
         {can("admin") ? (
           <Panel>

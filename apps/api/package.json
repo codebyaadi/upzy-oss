@@ -22,6 +22,7 @@
     "@upzy/crypto": "workspace:*",
     "@upzy/db": "workspace:*",
     "@upzy/notify": "workspace:*",
+    "@upzy/probes": "workspace:*",
     "@upzy/queue": "workspace:*",
     "@upzy/security": "workspace:*",
     "@upzy/transactional": "workspace:*",

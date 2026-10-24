@@ -11,6 +11,7 @@
     "./email": "./src/email.ts",
     "./unsubscribe": "./src/unsubscribe.ts",
     "./signup": "./src/signup.ts",
+    "./sso-origins": "./src/sso-origins.ts",
     "./two-factor-hook": "./src/two-factor-hook.ts"
   },
   "scripts": {
@@ -20,6 +21,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@better-auth/sso": "1.7.10",
     "@upzy/db": "workspace:*",
     "@upzy/queue": "workspace:*",
     "@upzy/transactional": "workspace:*",

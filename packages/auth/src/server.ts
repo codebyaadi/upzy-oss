@@ -1,3 +1,4 @@
+import { sso } from "@better-auth/sso";
 import {
   applyPendingAccess,
   deleteOrganization,
@@ -15,6 +16,7 @@ import { ac, orgRoles } from "./access";
 import { auditHook } from "./audit-hook";
 import { emails, queueEmail, type SendEmail } from "./email";
 import { parseSignupPolicy, signupBlockedReason, signupFacts, type SignupPolicy } from "./signup";
+import { ssoTrustedOrigins } from "./sso-origins";
 import { twoFactorHook } from "./two-factor-hook";
 
 /** GitHub sign-in is on when both halves of an OAuth app's credentials are set. */
@@ -54,7 +56,7 @@ export const createAuth = (
       useSecureCookies: baseURL.startsWith("https://"),
       ...(cookieDomain ? { crossSubDomainCookies: { enabled: true, domain: cookieDomain } } : {}),
     },
-    trustedOrigins: [webOrigin],
+    trustedOrigins: [webOrigin, ...ssoTrustedOrigins()],
     database: drizzleAdapter(db, {
       provider: "pg",
       usePlural: true,
@@ -125,11 +127,21 @@ export const createAuth = (
       },
     },
     hooks: { before: twoFactorHook(db), after: auditHook(db) },
+    // Registering and changing a provider goes through the API's own /sso routes (plan check, and the identity
+    // provider's addresses must be public). The raw routes stay closed over HTTP; sign-in and callbacks stay open.
+    disabledPaths: ["/sso/register", "/sso/update-provider"],
     plugins: [
       // The API reference page is a development aid: don't publish it.
       openAPI({ disableDefaultReference: process.env.NODE_ENV === "production" }),
       // Authenticator-app codes and backup codes. Accounts with no password (GitHub sign-in) can turn it on too.
       twoFactor({ issuer: "Upzy", allowPasswordless: true }),
+      // OpenID Connect for an organization. A provider can only sign people in once its owner has proven the domain
+      // with a DNS record, and people who sign in join that organization as members.
+      sso({
+        domainVerification: { enabled: true },
+        organizationProvisioning: { defaultRole: "member" },
+        providersLimit: 100, // one per organization is enforced by the API's /sso routes
+      }),
       organization({
         ac,
         roles: orgRoles,

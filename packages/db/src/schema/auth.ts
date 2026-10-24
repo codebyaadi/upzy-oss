@@ -89,6 +89,31 @@ export const twoFactors = pgTable(
   (t) => [index("two_factors_user_idx").on(t.userId), index("two_factors_secret_idx").on(t.secret)],
 );
 
+/**
+ * An organization's single sign-on provider (OpenID Connect). Owned by better-auth's sso plugin, which reads and writes
+ * it; the client secret inside `oidcConfig` is only ever read server-side.
+ */
+export const ssoProviders = pgTable(
+  "sso_providers",
+  {
+    id: text("id").primaryKey(),
+    issuer: text("issuer").notNull(),
+    oidcConfig: text("oidc_config"),
+    samlConfig: text("saml_config"),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    providerId: text("provider_id").notNull(),
+    organizationId: text("organization_id").references(() => organizations.id, {
+      onDelete: "cascade",
+    }),
+    domain: text("domain").notNull(),
+    domainVerified: boolean("domain_verified").notNull().default(false),
+  },
+  (t) => [
+    uniqueIndex("sso_providers_provider_id_key").on(t.providerId),
+    index("sso_providers_org_idx").on(t.organizationId),
+  ],
+);
+
 /** Organization-wide sign-in rules. A missing row means no rules. */
 export const organizationSecurity = pgTable("organization_security", {
   organizationId: text("organization_id")

@@ -18,6 +18,8 @@ export interface Limits {
   regions: number;
   /** Browser monitors: real-browser checks of a page or a login. They are heavy, so they are counted separately. */
   browserMonitors: number;
+  /** Single sign-on through the organization's own identity provider (Okta, Entra, Google Workspace, Keycloak). */
+  sso: boolean;
 }
 
 export interface Plan {
@@ -49,6 +51,7 @@ export const PLANS: Record<PlanId, Plan> = {
       clientReports: false,
       regions: 1,
       browserMonitors: 0,
+      sso: false,
     },
   },
   starter: {
@@ -66,6 +69,7 @@ export const PLANS: Record<PlanId, Plan> = {
       clientReports: false,
       regions: 2,
       browserMonitors: 2,
+      sso: false,
     },
   },
   pro: {
@@ -83,6 +87,7 @@ export const PLANS: Record<PlanId, Plan> = {
       clientReports: false,
       regions: 3,
       browserMonitors: 5,
+      sso: false,
     },
   },
   agency: {
@@ -100,6 +105,7 @@ export const PLANS: Record<PlanId, Plan> = {
       clientReports: true,
       regions: 5,
       browserMonitors: 20,
+      sso: true,
     },
   },
   // Not for sale: what everyone gets while billing is switched off (self-hosting, early access).
@@ -118,6 +124,7 @@ export const PLANS: Record<PlanId, Plan> = {
       clientReports: true,
       regions: Infinity,
       browserMonitors: Infinity,
+      sso: true,
     },
   },
 };
@@ -158,3 +165,6 @@ export const browserMonitorsMessage = (plan: PlanId, max: number) =>
   max === 0
     ? `Browser monitors aren't included in the ${PLANS[plan].name} plan. Upgrade under Settings → Billing.`
     : `The ${PLANS[plan].name} plan includes ${max} browser ${max === 1 ? "monitor" : "monitors"}. Upgrade under Settings → Billing to add more.`;
+
+export const ssoMessage = (plan: PlanId) =>
+  `Single sign-on isn't included in the ${PLANS[plan].name} plan. Upgrade to Agency under Settings → Billing.`;

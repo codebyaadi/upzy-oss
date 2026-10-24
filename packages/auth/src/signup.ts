@@ -38,6 +38,8 @@ export const parseSignupPolicy = (
 export interface SignupFacts {
   userCount: number;
   hasPendingInvitation: boolean;
+  /** An organization has verified this email's domain for single sign-on, so its people are expected. */
+  hasSsoDomain?: boolean;
 }
 
 /** Pure decision, so the rules are easy to read and test. Returns null when allowed, or the reason it isn't. */
@@ -55,13 +57,13 @@ export function signupBlockedReason(
   const e = email.trim().toLowerCase();
   const domain = e.split("@")[1] ?? "";
   if (policy.allowedEmails.includes(e) || policy.allowedDomains.includes(domain)) return null;
-  if (facts.hasPendingInvitation) return null;
+  if (facts.hasPendingInvitation || facts.hasSsoDomain) return null;
   return "Sign-ups are by invitation only. Ask a team admin to invite you.";
 }
 
 /** Reads the two facts the decision needs from the database. */
 export async function signupFacts(db: Db, email: string): Promise<SignupFacts> {
-  const { users, invitations } = schema;
+  const { users, invitations, ssoProviders } = schema;
   const [{ n }] = (await db.select({ n: count() }).from(users)) as [{ n: number }];
   const [inv] = await db
     .select({ id: invitations.id })
@@ -74,5 +76,15 @@ export async function signupFacts(db: Db, email: string): Promise<SignupFacts> {
       ),
     )
     .limit(1);
-  return { userCount: Number(n), hasPendingInvitation: !!inv };
+  const [sso] = await db
+    .select({ id: ssoProviders.id })
+    .from(ssoProviders)
+    .where(
+      and(
+        eq(ssoProviders.domainVerified, true),
+        sql`lower(${ssoProviders.domain}) = ${email.trim().toLowerCase().split("@")[1] ?? ""}`,
+      ),
+    )
+    .limit(1);
+  return { userCount: Number(n), hasPendingInvitation: !!inv, hasSsoDomain: !!sso };
 }

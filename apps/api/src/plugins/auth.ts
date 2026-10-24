@@ -1,7 +1,7 @@
 import { effectiveRole, hasRole, type Role } from "@upzy/auth/roles";
 import { TWO_FACTOR_REQUIRED } from "@upzy/auth/two-factor-hook";
 import type { Auth } from "@upzy/auth/types";
-import { orgRequiresTwoFactor, type Db } from "@upzy/db";
+import { twoFactorMissing, type Db } from "@upzy/db";
 import { Elysia } from "elysia";
 
 import { isRestricted } from "../lib/scope";
@@ -52,7 +52,7 @@ export const authPlugin = (auth: Pick<Auth, "handler" | "api">, db?: Db) =>
             });
           }
           // An organization can require two-factor sign-in. Until the person sets it up they get only this.
-          if (db && !session.user.twoFactorEnabled && (await orgRequiresTwoFactor(db, orgId)))
+          if (db && (await twoFactorMissing(db, session.user, orgId)))
             throw new HttpError(
               403,
               TWO_FACTOR_REQUIRED,

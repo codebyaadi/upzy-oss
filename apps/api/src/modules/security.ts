@@ -1,4 +1,11 @@
-import { membersWithoutTwoFactor, orgRequiresTwoFactor, schema, type Db } from "@upzy/db";
+import {
+  membersWithoutTwoFactor,
+  orgRequiresTwoFactor,
+  schema,
+  twoFactorMissing,
+  usesOrgSso,
+  type Db,
+} from "@upzy/db";
 import { Elysia } from "elysia";
 import { z } from "zod";
 
@@ -22,8 +29,8 @@ export const securityModule = (db: Db, authP: AuthPlugin) =>
           twoFactorEnabled: Boolean(user.twoFactorEnabled),
           /** The active organization insists on it. */
           organizationRequires: required,
-          /** Signed in but not allowed in yet. */
-          blocked: required && !user.twoFactorEnabled,
+          /** Signed in but not allowed in yet. Single sign-on counts: its provider asks for the second factor. */
+          blocked: orgId ? await twoFactorMissing(db, user, orgId) : false,
         };
       },
       { auth: true },
@@ -43,7 +50,7 @@ export const securityModule = (db: Db, authP: AuthPlugin) =>
       "/security/policy",
       async ({ orgId, user, body }) => {
         // The person turning it on must have it themselves, or they would lock themselves out.
-        if (body.requireTwoFactor && !user.twoFactorEnabled)
+        if (body.requireTwoFactor && !user.twoFactorEnabled && !(await usesOrgSso(db, user.id, orgId)))
           throw new HttpError(
             400,
             "Set up two-factor authentication for your own account first (Account → Security), then require it.",

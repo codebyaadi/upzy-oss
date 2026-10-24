@@ -43,6 +43,15 @@ describe("sign-up policy", () => {
     ).toBeNull();
   });
 
+  test("a domain an organization has verified for single sign-on gets in", () => {
+    expect(
+      signupBlockedReason(policy(), "x@corp.com", { ...none, hasSsoDomain: true }),
+    ).toBeNull();
+    expect(
+      signupBlockedReason(policy({ mode: "closed" }), "x@corp.com", { ...none, hasSsoDomain: true }),
+    ).not.toBeNull();
+  });
+
   test("closed ignores allow-lists and invitations", () => {
     const p = policy({ mode: "closed", allowedEmails: ["boss@y.com"] });
     expect(signupBlockedReason(p, "boss@y.com", { ...none, hasPendingInvitation: true })).toContain(
