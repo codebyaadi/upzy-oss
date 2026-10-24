@@ -93,7 +93,7 @@ export const monitors = pgTable(
     /** Consecutive failed checks before the monitor is declared down. */
     failureThreshold: integer("failure_threshold").notNull().default(2),
     consecutiveFailures: integer("consecutive_failures").notNull().default(0),
-    /** Where it is checked from. Empty means the main server only. See docs/MULTI-REGION.md. */
+    /** Where it is checked from. Empty means the main server only. See docs/guides/MULTI-REGION.md. */
     regions: text("regions")
       .array()
       .notNull()

@@ -124,17 +124,17 @@ CI (`.github/workflows`) runs format, lint, types, migrations (including a re-ru
 
 ## Self-host it
 
-One small VPS with Docker Compose and Caddy (automatic HTTPS) is enough to start. [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) covers the architecture, where to host it, step-by-step setup, backups, the full configuration reference and the GitHub Actions release workflow. The files are in `deploy/` and `docker/`.
+One small VPS with Docker Compose and Caddy (automatic HTTPS) is enough to start. [docs/self-hosting/DEPLOYMENT.md](docs/self-hosting/DEPLOYMENT.md) covers the architecture, where to host it, step-by-step setup, backups, the full configuration reference and the GitHub Actions release workflow. The files are in `deploy/` and `docker/`.
 
-| Guide                                              | What it covers                                                   |
-| -------------------------------------------------- | ---------------------------------------------------------------- |
-| [Monitors](docs/MONITORS.md)                       | API checks, multi-step flows, secrets and heartbeat monitors     |
-| [Health score and fixes](docs/HEALTH-AND-FIXES.md) | The grade, fix-for-your-stack and Verify fix                     |
-| [Status pages](docs/STATUS-PAGES.md)               | Custom domains, incident updates and email subscribers           |
-| [Onboarding](docs/ONBOARDING.md)                   | The first-run flow                                               |
-| [Email](docs/EMAIL.md)                             | Choosing an SMTP provider and checking delivery                  |
-| [Billing](docs/BILLING.md)                         | Optional plans and limits with Dodo Payments (off by default)    |
-| [Legal pages](docs/LEGAL.md)                       | Terms, privacy, acceptable use, AI data use and the UpzyBot page |
+| Guide                                                     | What it covers                                                   |
+| --------------------------------------------------------- | ---------------------------------------------------------------- |
+| [Monitors](docs/guides/MONITORS.md)                       | API checks, multi-step flows, secrets and heartbeat monitors     |
+| [Health score and fixes](docs/guides/HEALTH-AND-FIXES.md) | The grade, fix-for-your-stack and Verify fix                     |
+| [Status pages](docs/guides/STATUS-PAGES.md)               | Custom domains, incident updates and email subscribers           |
+| [Onboarding](docs/guides/ONBOARDING.md)                   | The first-run flow                                               |
+| [Email](docs/self-hosting/EMAIL.md)                       | Choosing an SMTP provider and checking delivery                  |
+| [Billing](docs/self-hosting/BILLING.md)                   | Optional plans and limits with Dodo Payments (off by default)    |
+| [Legal pages](docs/self-hosting/LEGAL.md)                 | Terms, privacy, acceptable use, AI data use and the UpzyBot page |
 
 Billing is off by default. With no payment keys set, nothing is limited, which is what you want when self-hosting.
 
@@ -149,12 +149,12 @@ Billing is off by default. With no payment keys set, nothing is limited, which i
 - **Account and organization deletion are self-service** (Account page in the user menu). An owner deletes an organization by typing its name; a paid subscription is cancelled first. Deleting an account removes the organizations you were alone in, and is refused while you are the only owner of one with other people in it.
 - **Lifecycle emails** (welcome, a nudge to fix your first finding, a heads-up before a trial ends) go out through the same SMTP settings. Each has a one-click unsubscribe, and `LIFECYCLE_EMAILS=off` stops them.
 
-- **Browser monitors:** open a page in a real browser, sign in with a test account, and check what appears. Steps are plain data, never code, and everything the browser requests goes through a public-addresses-only proxy. Optional, in its own container. See [docs/BROWSER-MONITORS.md](docs/BROWSER-MONITORS.md).
-- **Multi-region checks:** check a monitor from several places; it counts as down only when most of them agree. See [docs/MULTI-REGION.md](docs/MULTI-REGION.md).
+- **Browser monitors:** open a page in a real browser, sign in with a test account, and check what appears. Steps are plain data, never code, and everything the browser requests goes through a public-addresses-only proxy. Optional, in its own container. See [docs/guides/BROWSER-MONITORS.md](docs/guides/BROWSER-MONITORS.md).
+- **Multi-region checks:** check a monitor from several places; it counts as down only when most of them agree. See [docs/guides/MULTI-REGION.md](docs/guides/MULTI-REGION.md).
 - **Seen before:** each incident page lists earlier incidents in the same workspace that failed the same way (matched with pgvector on the error text, computed locally), and the AI triage uses them as evidence.
-- **Two-factor sign-in:** authenticator app and backup codes for everyone, and an organization setting that makes it required. See [docs/TWO-FACTOR.md](docs/TWO-FACTOR.md).
-- **Alert integrations:** email, Slack, Discord, Microsoft Teams, PagerDuty, Opsgenie, GitHub issues and signed webhooks. See [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
-- **For agencies:** the **All workspaces** page shows every client's monitors, open incidents, critical findings and security grade on one screen, the Agency plan can put a client's logo on its status page, and any viewer or member can be [limited to some workspaces](docs/ACCESS.md) so a client sees only their own, and [scheduled client reports](docs/REPORTS.md) email each client a plain uptime and security summary.
+- **Two-factor sign-in:** authenticator app and backup codes for everyone, and an organization setting that makes it required. See [docs/guides/TWO-FACTOR.md](docs/guides/TWO-FACTOR.md).
+- **Alert integrations:** email, Slack, Discord, Microsoft Teams, PagerDuty, Opsgenie, GitHub issues and signed webhooks. See [docs/guides/INTEGRATIONS.md](docs/guides/INTEGRATIONS.md).
+- **For agencies:** the **All workspaces** page shows every client's monitors, open incidents, critical findings and security grade on one screen, the Agency plan can put a client's logo on its status page, and any viewer or member can be [limited to some workspaces](docs/guides/ACCESS.md) so a client sees only their own, and [scheduled client reports](docs/guides/REPORTS.md) email each client a plain uptime and security summary.
 - **Free checkers** at `/tools` (security headers, SSL certificate, SPF and DMARC) need no account. They run the same checks as the scanner, are limited to 10 a minute per address, and cache each site for ten minutes. Only public sites can be checked.
 
 ## Security

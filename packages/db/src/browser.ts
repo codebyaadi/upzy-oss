@@ -1,7 +1,7 @@
 /*
  * Browser monitors drive a real browser, which is heavy and runs customer-chosen pages, so it is optional: the
  * installation points BROWSER_WS_ENDPOINT at a separate Playwright server (its own container, see
- * docs/BROWSER-MONITORS.md). Without it the monitor type is not offered and nothing is scheduled.
+ * docs/guides/BROWSER-MONITORS.md). Without it the monitor type is not offered and nothing is scheduled.
  */
 
 /** The job queue the browser role listens on. */

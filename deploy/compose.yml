@@ -1,5 +1,5 @@
 # Production stack for one VPS: Caddy (TLS) -> web + api, a worker, Postgres, nightly backups.
-# Usage (on the server, in this directory, with a filled-in .env next to this file): see docs/DEPLOYMENT.md
+# Usage (on the server, in this directory, with a filled-in .env next to this file): see docs/self-hosting/DEPLOYMENT.md
 #
 #   docker compose pull && docker compose up -d
 name: upzy
@@ -43,7 +43,7 @@ x-server: &server
     NVD_API_KEY: ${NVD_API_KEY:-}
     GOOGLE_SAFE_BROWSING_KEY: ${GOOGLE_SAFE_BROWSING_KEY:-}
     PROBE_REGIONS: ${PROBE_REGIONS:-}
-    # Browser monitors (optional). Needs the browser profile: see docs/BROWSER-MONITORS.md
+    # Browser monitors (optional). Needs the browser profile: see docs/guides/BROWSER-MONITORS.md
     BROWSER_WS_ENDPOINT: ${BROWSER_WS_ENDPOINT:-}
     AI_RPM_LIMIT: ${AI_RPM_LIMIT:-60}
     AI_ORG_DAILY_TOKEN_BUDGET: ${AI_ORG_DAILY_TOKEN_BUDGET:-200000}

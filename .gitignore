@@ -43,3 +43,4 @@ deploy/backups/
 deploy/aws/.state*
 deploy/.failed-images
 deploy/.deploy-hash
+apps/web/AGENTS.md

@@ -44,11 +44,12 @@ describe("sign-up policy", () => {
   });
 
   test("a domain an organization has verified for single sign-on gets in", () => {
+    expect(signupBlockedReason(policy(), "x@corp.com", { ...none, hasSsoDomain: true })).toBeNull();
     expect(
-      signupBlockedReason(policy(), "x@corp.com", { ...none, hasSsoDomain: true }),
-    ).toBeNull();
-    expect(
-      signupBlockedReason(policy({ mode: "closed" }), "x@corp.com", { ...none, hasSsoDomain: true }),
+      signupBlockedReason(policy({ mode: "closed" }), "x@corp.com", {
+        ...none,
+        hasSsoDomain: true,
+      }),
     ).not.toBeNull();
   });
 

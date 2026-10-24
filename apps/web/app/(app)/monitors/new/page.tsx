@@ -227,7 +227,10 @@ export default function NewMonitorPage() {
             <SelectField
               id="type"
               value={d.type}
-              onValueChange={(type) => set({ type })}
+              // Browser checks are slow: the 1 minute choice isn't offered for them, so move off it.
+              onValueChange={(type) =>
+                set({ type, ...(type === "synthetic" && d.every === "60" ? { every: "300" } : {}) })
+              }
               options={Object.entries(TYPES)
                 .filter(([k]) => k !== "synthetic" || browserOn)
                 .map(([k, v]) => ({ value: k as Type, label: v.label }))}

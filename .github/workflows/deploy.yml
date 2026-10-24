@@ -91,7 +91,7 @@ jobs:
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id
           chmod 600 ~/.ssh/id
           ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
-          # compose.yml, Caddyfile and .env already live in /opt/upzy/deploy (see docs/DEPLOYMENT.md).
+          # compose.yml, Caddyfile and .env already live in /opt/upzy/deploy (see docs/self-hosting/DEPLOYMENT.md).
           ssh -i ~/.ssh/id "$USER_NAME@$HOST" "cd /opt/upzy/deploy \
             && sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=$TAG/' .env \
             && docker compose pull \

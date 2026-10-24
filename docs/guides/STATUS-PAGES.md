@@ -35,7 +35,7 @@ Every public status page has a "Get updates by email" form (also on custom domai
 
 Subscribers get an email when an incident opens on a monitor the page lists, when you post an update, and when it recovers. The email uses the public name of the component, never the incident title or error text, plus the message you wrote for customers. Admins see only how many people subscribed, not their addresses.
 
-Email goes out through the same SMTP settings as everything else (see [EMAIL.md](EMAIL.md)); until SMTP is set up, confirmation emails can't be delivered.
+Email goes out through the same SMTP settings as everything else (see [EMAIL.md](../self-hosting/EMAIL.md)); until SMTP is set up, confirmation emails can't be delivered.
 
 Limits that protect the people whose addresses get typed in: a page sends at most 30 confirmation emails an hour, never mails the same address again within 10 minutes, accepts up to 2,000 subscribers, and forgets addresses that never confirmed after a week. The confirm and unsubscribe links only show a button; the action happens when the button is pressed, so a mail scanner that opens links can't confirm or cancel anyone.
 

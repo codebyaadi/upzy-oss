@@ -23,7 +23,7 @@
     "@upzy/transactional": "workspace:*",
     "@upzy/validator": "workspace:*",
     "drizzle-orm": "^0.45.4",
-    "nodemailer": "^10.1.1",
+    "nodemailer": "^10.1.4",
     "playwright-core": "1.64.1",
     "zod": "catalog:"
   },

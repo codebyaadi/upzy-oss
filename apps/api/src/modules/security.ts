@@ -50,7 +50,11 @@ export const securityModule = (db: Db, authP: AuthPlugin) =>
       "/security/policy",
       async ({ orgId, user, body }) => {
         // The person turning it on must have it themselves, or they would lock themselves out.
-        if (body.requireTwoFactor && !user.twoFactorEnabled && !(await usesOrgSso(db, user.id, orgId)))
+        if (
+          body.requireTwoFactor &&
+          !user.twoFactorEnabled &&
+          !(await usesOrgSso(db, user.id, orgId))
+        )
           throw new HttpError(
             400,
             "Set up two-factor authentication for your own account first (Account → Security), then require it.",

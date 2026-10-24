@@ -28,7 +28,7 @@ Every report has an unsubscribe link, and the recipient can opt out alone with o
 
 ## Running it yourself
 
-- Reports are sent through the same email settings as everything else ([EMAIL.md](EMAIL.md)).
+- Reports are sent through the same email settings as everything else ([EMAIL.md](../self-hosting/EMAIL.md)).
 - `CLIENT_REPORTS=off` on the worker sends none. They also stay off without `BETTER_AUTH_SECRET`, which signs the unsubscribe links.
 - With billing switched off (self-hosted), every organization can use reports.
 - If an organization's plan stops including reports, nothing is sent and no period is lost: the next report after it upgrades again is sent normally.

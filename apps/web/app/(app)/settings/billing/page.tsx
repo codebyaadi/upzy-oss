@@ -110,7 +110,7 @@ export default function BillingPage() {
           <p className="font-semibold">Billing isn&apos;t switched on for this installation.</p>
           <p className="text-muted-foreground mt-1 text-sm">
             There are no plan limits here: everything is available. If you run this installation,
-            set the Dodo Payments keys to turn plans on (see docs/BILLING.md).
+            set the Dodo Payments keys to turn plans on (see docs/self-hosting/BILLING.md).
           </p>
         </Panel>
       )}

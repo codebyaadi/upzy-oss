@@ -43,4 +43,4 @@ If an outage started before the channel was added, its recovery has no issue to 
 
 - A provider refusing a request (a wrong key, a deleted repository) is retried, then shown as failed on the incident's delivery list so you can see why.
 - Anything your own server can't reach (a Teams tenant that blocks it, for example) fails the same way. Nothing is lost: the incident and its other alerts are unaffected.
-- To add a provider that isn't here, use a signed webhook ([README](../README.md)) and let your own code forward it.
+- To add a provider that isn't here, use a signed webhook ([README](../../README.md)) and let your own code forward it.
