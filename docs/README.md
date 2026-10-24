@@ -18,11 +18,9 @@
 
 **Running your own install** (`self-hosting/`)
 
-| Guide                                    | What it covers                                        |
-| ---------------------------------------- | ----------------------------------------------------- |
-| [Deployment](self-hosting/DEPLOYMENT.md) | Docker Compose, Caddy, backups, updates, operations   |
-| [Email](self-hosting/EMAIL.md)           | Resend or SMTP, templates, unsubscribe                |
-| [Billing](self-hosting/BILLING.md)       | Plans and Dodo Payments (or turn billing off)         |
-| [Legal pages](self-hosting/LEGAL.md)     | The terms, privacy and acceptable-use pages to review |
+| Guide                                    | What it covers                                      |
+| ---------------------------------------- | --------------------------------------------------- |
+| [Deployment](self-hosting/DEPLOYMENT.md) | Docker Compose, Caddy, backups, updates, operations |
+| [Email](self-hosting/EMAIL.md)           | Resend or SMTP, templates, unsubscribe              |
 
 Security reports: see [SECURITY.md](../SECURITY.md).

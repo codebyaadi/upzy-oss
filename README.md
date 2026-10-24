@@ -126,15 +126,13 @@ CI (`.github/workflows`) runs format, lint, types, migrations (including a re-ru
 
 One small VPS with Docker Compose and Caddy (automatic HTTPS) is enough to start. [docs/self-hosting/DEPLOYMENT.md](docs/self-hosting/DEPLOYMENT.md) covers the architecture, where to host it, step-by-step setup, backups, the full configuration reference and the GitHub Actions release workflow. The files are in `deploy/` and `docker/`.
 
-| Guide                                                     | What it covers                                                   |
-| --------------------------------------------------------- | ---------------------------------------------------------------- |
-| [Monitors](docs/guides/MONITORS.md)                       | API checks, multi-step flows, secrets and heartbeat monitors     |
-| [Health score and fixes](docs/guides/HEALTH-AND-FIXES.md) | The grade, fix-for-your-stack and Verify fix                     |
-| [Status pages](docs/guides/STATUS-PAGES.md)               | Custom domains, incident updates and email subscribers           |
-| [Onboarding](docs/guides/ONBOARDING.md)                   | The first-run flow                                               |
-| [Email](docs/self-hosting/EMAIL.md)                       | Choosing an SMTP provider and checking delivery                  |
-| [Billing](docs/self-hosting/BILLING.md)                   | Optional plans and limits with Dodo Payments (off by default)    |
-| [Legal pages](docs/self-hosting/LEGAL.md)                 | Terms, privacy, acceptable use, AI data use and the UpzyBot page |
+| Guide                                                     | What it covers                                               |
+| --------------------------------------------------------- | ------------------------------------------------------------ |
+| [Monitors](docs/guides/MONITORS.md)                       | API checks, multi-step flows, secrets and heartbeat monitors |
+| [Health score and fixes](docs/guides/HEALTH-AND-FIXES.md) | The grade, fix-for-your-stack and Verify fix                 |
+| [Status pages](docs/guides/STATUS-PAGES.md)               | Custom domains, incident updates and email subscribers       |
+| [Onboarding](docs/guides/ONBOARDING.md)                   | The first-run flow                                           |
+| [Email](docs/self-hosting/EMAIL.md)                       | Choosing an SMTP provider and checking delivery              |
 
 Billing is off by default. With no payment keys set, nothing is limited, which is what you want when self-hosting.
 
