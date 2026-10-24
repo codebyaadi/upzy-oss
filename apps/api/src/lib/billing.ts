@@ -8,6 +8,7 @@ import {
   limitMessage,
   customLogoMessage,
   regionsMessage,
+  browserMonitorsMessage,
   loadBillingConfig,
   type BillingConfig,
   type DodoClient,
@@ -16,7 +17,7 @@ import {
   type SubscriptionRow,
 } from "@upzy/billing";
 import { schema, type Db } from "@upzy/db";
-import { count, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 
 import { HttpError } from "../plugins/errors";
 import { allOrgWorkspaceIds } from "./scope";
@@ -109,6 +110,23 @@ export function createBilling(deps: BillingDeps = { config: loadBillingConfig(pr
     if (places > max) throw new HttpError(402, regionsMessage(ent.plan, max));
   }
 
+  /** Refuses (402) when one more browser monitor would pass the plan's limit. */
+  async function assertBrowserMonitor(db: Db, orgId: string) {
+    const { ent } = await entitlementFor(db, orgId);
+    const max = PLANS[ent.plan].limits.browserMonitors;
+    if (max === Infinity) return;
+    const [r] = await db
+      .select({ n: count() })
+      .from(monitors)
+      .where(
+        and(
+          inArray(monitors.workspaceId, allOrgWorkspaceIds(db, orgId)),
+          eq(monitors.type, "synthetic"),
+        ),
+      );
+    if ((r?.n ?? 0) + 1 > max) throw new HttpError(402, browserMonitorsMessage(ent.plan, max));
+  }
+
   async function assertCustomDomain(db: Db, orgId: string) {
     const { ent } = await entitlementFor(db, orgId);
     if (!PLANS[ent.plan].limits.customDomain)
@@ -136,6 +154,7 @@ export function createBilling(deps: BillingDeps = { config: loadBillingConfig(pr
     assertCanCreate,
     assertInterval,
     assertRegions,
+    assertBrowserMonitor,
     assertCustomDomain,
     assertCustomLogo,
     customLogoAllowed,

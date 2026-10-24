@@ -44,6 +44,17 @@ jobs:
             ghcr.io/${{ steps.meta.outputs.repo }}-server:latest
           cache-from: type=gha,scope=server
           cache-to: type=gha,scope=server,mode=max
+      - name: Browser image (optional, for browser monitors)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile.browser
+          push: true
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.repo }}-browser:${{ steps.meta.outputs.tag }}
+            ghcr.io/${{ steps.meta.outputs.repo }}-browser:latest
+          cache-from: type=gha,scope=browser
+          cache-to: type=gha,scope=browser,mode=max
       - name: Web image
         uses: docker/build-push-action@v7
         with:

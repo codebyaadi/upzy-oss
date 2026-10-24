@@ -1,7 +1,7 @@
 import type { Db } from "@upzy/db";
-import { checkQueue, regionsOf, schema } from "@upzy/db";
+import { BROWSER_QUEUE, browserEndpoint, checkQueue, regionsOf, schema } from "@upzy/db";
 import { enqueue } from "@upzy/queue";
-import { and, eq, lte, sql } from "drizzle-orm";
+import { and, eq, lte, ne, sql } from "drizzle-orm";
 
 export const CHECK_QUEUE = "check";
 export interface CheckJob {
@@ -19,9 +19,21 @@ export async function scheduleDue(db: Db, batch = 200): Promise<number> {
   const { monitors } = schema;
   return db.transaction(async (tx) => {
     const due = await tx
-      .select({ id: monitors.id, interval: monitors.interval, regions: monitors.regions })
+      .select({
+        id: monitors.id,
+        interval: monitors.interval,
+        regions: monitors.regions,
+        type: monitors.type,
+      })
       .from(monitors)
-      .where(and(eq(monitors.active, true), lte(monitors.nextRun, sql`now()`)))
+      .where(
+        and(
+          eq(monitors.active, true),
+          lte(monitors.nextRun, sql`now()`),
+          // Browser monitors wait until this installation has a browser to run them in.
+          browserEndpoint() ? undefined : ne(monitors.type, "synthetic"),
+        ),
+      )
       .orderBy(monitors.nextRun)
       .limit(batch)
       .for("update", { skipLocked: true });
@@ -31,6 +43,16 @@ export async function scheduleDue(db: Db, batch = 200): Promise<number> {
         .update(monitors)
         .set({ nextRun: sql`now() + ${`${m.interval} seconds`}::interval` })
         .where(eq(monitors.id, m.id));
+      // A browser check runs where the browser is, not per region.
+      if (m.type === "synthetic") {
+        await enqueue<CheckJob>(
+          tx,
+          BROWSER_QUEUE,
+          { monitorId: m.id, region: "local" },
+          { dedupeKey: `${m.id}:browser`, maxAttempts: 1 },
+        );
+        continue;
+      }
       // One job per region, each on its own queue so only that region's probers pick it up.
       for (const region of regionsOf(m))
         await enqueue<CheckJob>(

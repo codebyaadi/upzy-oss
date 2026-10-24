@@ -9,6 +9,7 @@ import { useWorkspace } from "@/components/app/workspace";
 import { ButtonLink } from "@/components/button-link";
 import { api } from "@/lib/api";
 import { ms, pct, timeAgo } from "@/lib/format";
+import { kindLabel } from "@/lib/monitor-form";
 import { unwrap, useApi } from "@/lib/use-api";
 
 export default function MonitorsPage() {
@@ -78,7 +79,7 @@ export default function MonitorsPage() {
                     <p
                       className={cn("text-muted-foreground truncate text-sm", compact && "text-xs")}
                     >
-                      <span className="uppercase">{m.type}</span>
+                      <span className="uppercase">{kindLabel(m.type)}</span>
                       {m.type === "heartbeat" ? " · waits for pings" : ` · ${m.target}`}
                     </p>
                   </div>

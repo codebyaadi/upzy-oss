@@ -1,0 +1,19 @@
+# The browser behind browser monitors: Playwright's own image (Chromium and its system libraries) running its server,
+# which the worker drives over a WebSocket. Nothing of Upzy is in here, no database access and no secrets.
+#
+# The Playwright version must equal the playwright-core version in apps/worker/package.json, exactly: the client and
+# the server speak a protocol that changes between releases. A test in apps/worker checks this.
+ARG PLAYWRIGHT_VERSION=1.64.1
+FROM mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble
+
+ARG PLAYWRIGHT_VERSION
+WORKDIR /srv
+RUN npm init -y >/dev/null \
+ && npm install --no-audit --no-fund --omit=dev playwright-core@${PLAYWRIGHT_VERSION} \
+ && rm -rf /root/.npm
+
+# The image already ships the matching browsers in /ms-playwright and a non-root user.
+USER pwuser
+EXPOSE 3000
+# BROWSER_TOKEN is part of the address, so only the worker can start a browser. --max-clients bounds memory.
+CMD ["sh", "-c", "exec node node_modules/playwright-core/cli.js run-server --port 3000 --host 0.0.0.0 --path \"/${BROWSER_TOKEN:?set BROWSER_TOKEN}\" --max-clients ${BROWSER_MAX_CLIENTS:-3}"]

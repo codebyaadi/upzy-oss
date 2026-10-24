@@ -130,7 +130,12 @@ function used(parts: { url?: string; headers?: Record<string, string>; body?: st
  * extracts. Returns the problem in words, or null.
  */
 export function referencesProblem(
-  config: { headers?: Record<string, string>; body?: string; steps?: Step[] },
+  config: {
+    headers?: Record<string, string>;
+    body?: string;
+    steps?: Step[];
+    browser?: { do: string; value?: string }[];
+  },
   secretNames: Iterable<string>,
   target?: string,
 ): string | null {
@@ -145,6 +150,14 @@ export function referencesProblem(
     }
     return null;
   };
+  // A browser monitor can only use secrets (typed into a field): there are no earlier responses to read from.
+  if (config.browser?.length) {
+    for (const [i, s] of config.browser.entries()) {
+      const p = check(templatesIn(s.value), `Browser step ${i + 1}`);
+      if (p) return p;
+    }
+    return null;
+  }
   if (config.steps?.length) {
     for (const [i, s] of config.steps.entries()) {
       const p = check(used(s), `Step ${i + 1}`);

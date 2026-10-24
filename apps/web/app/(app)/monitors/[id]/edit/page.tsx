@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 
 import { ViewOnlyNote } from "@/components/app/can";
 import {
+  BrowserSteps,
   FlowSteps,
   HeartbeatFields,
   HttpOptions,
@@ -18,7 +19,7 @@ import { SelectField } from "@/components/app/select-field";
 import { BackLink, DetailSkeleton, ErrorNote, Field, PageHeader, Panel } from "@/components/app/ui";
 import { useWorkspace } from "@/components/app/workspace";
 import { api } from "@/lib/api";
-import { configOf, draftOf, secretsForUpdate, type Draft } from "@/lib/monitor-form";
+import { configOf, draftOf, kindLabel, secretsForUpdate, type Draft } from "@/lib/monitor-form";
 import { errorMessage } from "@/lib/use-action";
 import { unwrap, useApi } from "@/lib/use-api";
 
@@ -63,11 +64,11 @@ export default function EditMonitorPage() {
             : {
                 interval: Number(d.every),
                 failureThreshold: Number(d.threshold),
-                regions: d.regions,
+                ...(d.type === "synthetic" ? {} : { regions: d.regions }),
                 latencyThresholdMs: d.slowMs.trim() ? Number(d.slowMs) : null,
               }),
           config: configOf(d),
-          ...(d.type === "http" || d.type === "flow"
+          ...(d.type === "http" || d.type === "flow" || d.type === "synthetic"
             ? { secrets: secretsForUpdate(d.secrets) }
             : {}),
         } as never),
@@ -96,7 +97,7 @@ export default function EditMonitorPage() {
             />
           </Field>
           <p className="text-muted-foreground text-sm">
-            <span className="uppercase">{d.type}</span>
+            <span className="uppercase">{kindLabel(d.type)}</span>
             {d.type !== "flow" && d.type !== "heartbeat" && <> · {d.target}</>}. The type and
             address can&apos;t be changed: create a new monitor for a different one.
           </p>
@@ -114,6 +115,7 @@ export default function EditMonitorPage() {
             </>
           )}
           {d.type === "flow" && <FlowSteps d={d} set={set} />}
+          {d.type === "synthetic" && <BrowserSteps d={d} set={set} />}
           {d.type === "heartbeat" ? (
             <HeartbeatFields d={d} set={set} />
           ) : (
@@ -124,7 +126,7 @@ export default function EditMonitorPage() {
                   value={d.every}
                   onValueChange={(every) => set({ every })}
                   options={[
-                    { value: "60", label: "1 minute" },
+                    ...(d.type === "synthetic" ? [] : [{ value: "60", label: "1 minute" }]),
                     { value: "300", label: "5 minutes" },
                     { value: "600", label: "10 minutes" },
                     { value: "1800", label: "30 minutes" },
@@ -162,7 +164,7 @@ export default function EditMonitorPage() {
               </Field>
             </div>
           )}
-          {d.type !== "heartbeat" && (
+          {d.type !== "heartbeat" && d.type !== "synthetic" && (
             <RegionPicker value={d.regions} onChange={(regions) => set({ regions })} />
           )}
           <div className="flex gap-2">

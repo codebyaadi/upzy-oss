@@ -149,6 +149,7 @@ Billing is off by default. With no payment keys set, nothing is limited, which i
 - **Account and organization deletion are self-service** (Account page in the user menu). An owner deletes an organization by typing its name; a paid subscription is cancelled first. Deleting an account removes the organizations you were alone in, and is refused while you are the only owner of one with other people in it.
 - **Lifecycle emails** (welcome, a nudge to fix your first finding, a heads-up before a trial ends) go out through the same SMTP settings. Each has a one-click unsubscribe, and `LIFECYCLE_EMAILS=off` stops them.
 
+- **Browser monitors:** open a page in a real browser, sign in with a test account, and check what appears. Steps are plain data, never code, and everything the browser requests goes through a public-addresses-only proxy. Optional, in its own container. See [docs/BROWSER-MONITORS.md](docs/BROWSER-MONITORS.md).
 - **Multi-region checks:** check a monitor from several places; it counts as down only when most of them agree. See [docs/MULTI-REGION.md](docs/MULTI-REGION.md).
 - **Seen before:** each incident page lists earlier incidents in the same workspace that failed the same way (matched with pgvector on the error text, computed locally), and the AI triage uses them as evidence.
 - **Two-factor sign-in:** authenticator app and backup codes for everyone, and an organization setting that makes it required. See [docs/TWO-FACTOR.md](docs/TWO-FACTOR.md).

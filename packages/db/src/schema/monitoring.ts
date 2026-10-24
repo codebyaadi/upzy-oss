@@ -67,6 +67,8 @@ export interface MonitorConfig {
   assertions?: MonitorAssertion[];
   /** Flow monitors: requests run in order, each able to use values extracted from earlier responses. */
   steps?: MonitorStep[];
+  /** Browser monitors: what to do on the page (validated by @upzy/validator's BrowserStepSchema). */
+  browser?: Record<string, unknown>[];
   /** Heartbeat monitors: how often a ping is expected, and how many seconds late it may be. */
   expectEvery?: number;
   grace?: number;

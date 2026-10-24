@@ -16,6 +16,8 @@ export interface Limits {
   clientReports: boolean;
   /** How many places one monitor can be checked from at once. */
   regions: number;
+  /** Browser monitors: real-browser checks of a page or a login. They are heavy, so they are counted separately. */
+  browserMonitors: number;
 }
 
 export interface Plan {
@@ -46,6 +48,7 @@ export const PLANS: Record<PlanId, Plan> = {
       customLogo: false,
       clientReports: false,
       regions: 1,
+      browserMonitors: 0,
     },
   },
   starter: {
@@ -62,6 +65,7 @@ export const PLANS: Record<PlanId, Plan> = {
       customLogo: false,
       clientReports: false,
       regions: 2,
+      browserMonitors: 2,
     },
   },
   pro: {
@@ -78,6 +82,7 @@ export const PLANS: Record<PlanId, Plan> = {
       customLogo: false,
       clientReports: false,
       regions: 3,
+      browserMonitors: 5,
     },
   },
   agency: {
@@ -94,6 +99,7 @@ export const PLANS: Record<PlanId, Plan> = {
       customLogo: true,
       clientReports: true,
       regions: 5,
+      browserMonitors: 20,
     },
   },
   // Not for sale: what everyone gets while billing is switched off (self-hosting, early access).
@@ -111,6 +117,7 @@ export const PLANS: Record<PlanId, Plan> = {
       customLogo: true,
       clientReports: true,
       regions: Infinity,
+      browserMonitors: Infinity,
     },
   },
 };
@@ -146,3 +153,8 @@ export const clientReportsMessage = (plan: PlanId) =>
 
 export const regionsMessage = (plan: PlanId, max: number) =>
   `The ${PLANS[plan].name} plan checks each monitor from ${max} ${max === 1 ? "place" : "places"} at most. Upgrade under Settings → Billing to check from more.`;
+
+export const browserMonitorsMessage = (plan: PlanId, max: number) =>
+  max === 0
+    ? `Browser monitors aren't included in the ${PLANS[plan].name} plan. Upgrade under Settings → Billing.`
+    : `The ${PLANS[plan].name} plan includes ${max} browser ${max === 1 ? "monitor" : "monitors"}. Upgrade under Settings → Billing to add more.`;

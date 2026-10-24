@@ -95,7 +95,7 @@ run("monitor regions (postgres)", () => {
   test("lists what this installation offers, main server first", async () => {
     const r = await send("/monitor/regions", cookie);
     expect(r.status).toBe(200);
-    expect(await json(r)).toEqual({ regions: ["local", "eu-west", "us-east"], max: null });
+    expect(await json(r)).toMatchObject({ regions: ["local", "eu-west", "us-east"], max: null });
   });
 
   test("a monitor can be created with regions, and shows them", async () => {

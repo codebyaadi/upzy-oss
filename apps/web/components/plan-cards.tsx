@@ -14,6 +14,9 @@ export function planFeatures(id: PlanId): string[] {
     ...(l.regions > 1 && id !== "unlimited"
       ? [`Check each monitor from up to ${l.regions} regions`]
       : []),
+    ...(l.browserMonitors > 0 && id !== "unlimited"
+      ? [`${l.browserMonitors} browser monitors (login and checkout flows)`]
+      : []),
     ...(l.customLogo && id !== "unlimited" ? ["Your client's logo on status pages"] : []),
     ...(l.clientReports && id !== "unlimited" ? ["Scheduled reports emailed to your clients"] : []),
     "Unlimited team members",

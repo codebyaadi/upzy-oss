@@ -26,7 +26,68 @@ export interface StepDraft {
   assertions: AssertionRow[];
 }
 
-export type MonitorKind = "http" | "tcp" | "dns" | "ssl" | "flow" | "heartbeat";
+export type MonitorKind = "http" | "tcp" | "dns" | "ssl" | "flow" | "heartbeat" | "synthetic";
+
+/** What a person calls each type. "synthetic" is the stored name of the browser monitor. */
+export const kindLabel = (type: string) => (type === "synthetic" ? "browser" : type);
+
+export type BrowserAction =
+  | "goto"
+  | "click"
+  | "fill"
+  | "press"
+  | "wait_for"
+  | "expect_text"
+  | "expect_url"
+  | "wait";
+
+/** One row of a browser monitor, with every field kept as text; only the ones its action uses are sent. */
+export interface BrowserStepDraft {
+  do: BrowserAction;
+  url: string;
+  selector: string;
+  value: string;
+  key: "Enter" | "Tab" | "Escape";
+  text: string;
+  contains: string;
+  ms: string;
+}
+
+export const emptyBrowserStep = (): BrowserStepDraft => ({
+  do: "click",
+  url: "",
+  selector: "",
+  value: "",
+  key: "Enter",
+  text: "",
+  contains: "",
+  ms: "1000",
+});
+
+/** The API's shape for one row. */
+export function browserStepOf(s: BrowserStepDraft) {
+  switch (s.do) {
+    case "goto":
+      return { do: s.do, url: s.url.trim() };
+    case "click":
+    case "wait_for":
+      return { do: s.do, selector: s.selector.trim() };
+    case "fill":
+      return { do: s.do, selector: s.selector.trim(), value: s.value };
+    case "press":
+      return { do: s.do, key: s.key };
+    case "expect_text":
+      return {
+        do: s.do,
+        text: s.text,
+        ...(s.selector.trim() ? { selector: s.selector.trim() } : {}),
+      };
+    case "expect_url":
+      return { do: s.do, contains: s.contains };
+    case "wait":
+      return { do: s.do, ms: Number(s.ms) || 1000 };
+  }
+}
 
 export interface Draft {
   name: string;
@@ -45,6 +106,8 @@ export interface Draft {
   assertions: AssertionRow[];
   secrets: SecretRow[];
   steps: StepDraft[];
+  /** Browser monitors: what to do on the page after opening the target. */
+  browser: BrowserStepDraft[];
   expectEvery: string;
   /** "auto" lets the server pick a sensible grace. */
   grace: string;
@@ -75,6 +138,7 @@ export const emptyDraft = (): Draft => ({
   assertions: [],
   secrets: [],
   steps: [emptyStep()],
+  browser: [],
   expectEvery: "3600",
   grace: "auto",
 });
@@ -109,6 +173,7 @@ export function configOf(d: Draft) {
         extract: pairs(s.extract),
       })),
     };
+  if (d.type === "synthetic") return { browser: d.browser.map(browserStepOf) };
   if (d.type !== "http") return {};
   const headers = pairs(d.headers);
   const assertions = checks(d.assertions);
@@ -145,6 +210,7 @@ type Stored = {
   regions?: string[];
   secretNames: string[];
   config: {
+    browser?: Record<string, unknown>[];
     method?: "GET" | "HEAD" | "POST";
     headers?: Record<string, string>;
     body?: string;
@@ -198,6 +264,17 @@ export function draftOf(m: Stored): Draft {
           assertions: toChecks(s.assertions),
         }))
       : [emptyStep()],
+    browser: (c.browser ?? []).map((b) => ({
+      ...emptyBrowserStep(),
+      do: b.do as BrowserAction,
+      url: String(b.url ?? ""),
+      selector: String(b.selector ?? ""),
+      value: String(b.value ?? ""),
+      key: (b.key as BrowserStepDraft["key"]) ?? "Enter",
+      text: String(b.text ?? ""),
+      contains: String(b.contains ?? ""),
+      ms: String(b.ms ?? 1000),
+    })),
     expectEvery: String(c.expectEvery ?? 3600),
     grace: c.grace === undefined ? "auto" : String(c.grace),
   };

@@ -3,7 +3,14 @@ import { randomBytes } from "node:crypto";
 import { hasRole } from "@upzy/auth/roles";
 import { PLANS } from "@upzy/billing";
 import { decryptJson, encryptJson } from "@upzy/crypto";
-import { activeMaintenance, offeredRegions, schema, type Db } from "@upzy/db";
+import {
+  BROWSER_MIN_INTERVAL,
+  activeMaintenance,
+  browserEndpoint,
+  offeredRegions,
+  schema,
+  type Db,
+} from "@upzy/db";
 import {
   CreateMonitorSchema,
   UpdateMonitorSchema,
@@ -76,6 +83,14 @@ export const monitorModule = (
           // A heartbeat is pinged by the job, so how often we look is our business, not a plan limit.
           const heartbeat = body.type === "heartbeat";
           if (!heartbeat) await billing.assertInterval(db, orgId, body.interval);
+          const browser = body.type === "synthetic";
+          if (browser) {
+            if (!browserEndpoint())
+              throw new HttpError(422, "Browser monitors aren't set up on this installation.");
+            if (body.interval < BROWSER_MIN_INTERVAL)
+              throw new HttpError(422, "Browser monitors check at most every 5 minutes.");
+            await billing.assertBrowserMonitor(db, orgId);
+          }
           const target =
             body.type === "flow"
               ? body.config.steps![0]!.url
@@ -85,7 +100,7 @@ export const monitorModule = (
           if (!target) throw new HttpError(422, "A target is required");
 
           // Checked from the main server unless regions are chosen. A heartbeat has nothing to check from anywhere.
-          const regions = heartbeat ? [] : await chosenRegions(orgId, body.regions);
+          const regions = heartbeat || browser ? [] : await chosenRegions(orgId, body.regions);
 
           const config = { ...body.config };
           if (heartbeat)
@@ -175,7 +190,15 @@ export const monitorModule = (
         async ({ orgId }) => {
           const { ent } = await billing.entitlementFor(db, orgId);
           const max = PLANS[ent.plan].limits.regions;
-          return { regions: offeredRegions(), max: Number.isFinite(max) ? max : null };
+          const browserMax = PLANS[ent.plan].limits.browserMonitors;
+          return {
+            regions: offeredRegions(),
+            max: Number.isFinite(max) ? max : null,
+            browser: {
+              enabled: browserEndpoint() !== null,
+              max: Number.isFinite(browserMax) ? browserMax : null,
+            },
+          };
         },
         { org: true },
       )
@@ -222,7 +245,11 @@ export const monitorModule = (
           const patch: Partial<typeof monitors.$inferInsert> = { ...plain };
           if (regions !== undefined && !heartbeat)
             patch.regions = await chosenRegions(orgId, regions);
-          if (!heartbeat && interval !== undefined) patch.interval = interval;
+          if (!heartbeat && interval !== undefined) {
+            if (cur.type === "synthetic" && interval < BROWSER_MIN_INTERVAL)
+              throw new HttpError(422, "Browser monitors check at most every 5 minutes.");
+            patch.interval = interval;
+          }
 
           // Secrets: names sent are kept (null) or replaced (a value); names left out are deleted.
           let names = Object.keys(
@@ -255,6 +282,8 @@ export const monitorModule = (
               throw new HttpError(422, "A flow needs at least one step.");
             if (cur.type !== "flow" && config.steps)
               throw new HttpError(422, "Steps are only for flows.");
+            if (cur.type !== "synthetic" && config.browser)
+              throw new HttpError(422, "Browser steps are only for browser monitors.");
             if (heartbeat && !config.expectEvery)
               throw new HttpError(422, "Say how often the job should check in.");
             if (!heartbeat && (config.expectEvery !== undefined || config.grace !== undefined))
@@ -282,6 +311,7 @@ export const monitorModule = (
             headers?: Record<string, string>;
             body?: string;
             steps?: Step[];
+            browser?: { do: string; value?: string }[];
           };
           if (config || secrets) {
             const problem = referencesProblem(

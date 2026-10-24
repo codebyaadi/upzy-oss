@@ -1,5 +1,6 @@
 import z from "zod";
 
+import { BrowserStepSchema, MAX_BROWSER_STEPS } from "./browser";
 import {
   AssertionSchema,
   HeadersSchema,
@@ -31,6 +32,8 @@ export const MonitorConfigSchema = z
     assertions: z.array(AssertionSchema).max(10),
     /** A flow: several requests in order, each able to use values from the one before. */
     steps: z.array(StepSchema).min(1).max(5),
+    /** A browser monitor: what to do on the page after opening the target, and what to expect. */
+    browser: z.array(BrowserStepSchema).max(MAX_BROWSER_STEPS),
     expectEvery: HEARTBEAT_EVERY,
     grace: HEARTBEAT_GRACE,
   })
@@ -49,6 +52,10 @@ export const MonitorConfigSchema = z
     for (const [i, s] of (c.steps ?? []).entries()) {
       const problem = stepUrlProblem(s.url);
       if (problem) ctx.addIssue({ code: "custom", path: ["steps", i, "url"], message: problem });
+    }
+    for (const [i, b] of (c.browser ?? []).entries()) {
+      const problem = b.do === "goto" ? stepUrlProblem(b.url) : null;
+      if (problem) ctx.addIssue({ code: "custom", path: ["browser", i, "url"], message: problem });
     }
   });
 
@@ -151,6 +158,12 @@ export const CreateMonitorSchema = CreateMonitorBase.superRefine((m, ctx) => {
     ctx.addIssue({ code: "custom", path: ["target"], message: publicTarget().message });
   if (m.type === "flow" && !m.config.steps?.length)
     ctx.addIssue({ code: "custom", path: ["config", "steps"], message: "Add at least one step" });
+  if (m.type !== "synthetic" && m.config.browser)
+    ctx.addIssue({
+      code: "custom",
+      path: ["config", "browser"],
+      message: "Browser steps are only for browser monitors",
+    });
   if (m.type !== "flow" && m.config.steps)
     ctx.addIssue({
       code: "custom",

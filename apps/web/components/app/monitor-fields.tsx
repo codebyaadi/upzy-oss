@@ -7,7 +7,10 @@ import { SelectField } from "@/components/app/select-field";
 import { Field } from "@/components/app/ui";
 import { api } from "@/lib/api";
 import {
+  emptyBrowserStep,
   emptyStep,
+  type BrowserAction,
+  type BrowserStepDraft,
   type AssertionRow,
   type Draft,
   type Pair,
@@ -187,6 +190,162 @@ export function SecretFields({
         <code className="font-mono">{"Bearer {{secret.API_TOKEN}}"}</code>. Values are stored
         encrypted and can&apos;t be read back.
       </p>
+    </div>
+  );
+}
+
+const ACTIONS: { value: BrowserAction; label: string }[] = [
+  { value: "click", label: "Click" },
+  { value: "fill", label: "Type into a field" },
+  { value: "press", label: "Press a key" },
+  { value: "wait_for", label: "Wait for something to appear" },
+  { value: "expect_text", label: "Expect this text" },
+  { value: "expect_url", label: "Expect the address to contain" },
+  { value: "goto", label: "Open another page" },
+  { value: "wait", label: "Wait a moment" },
+];
+
+/**
+ * What a visitor does on the page, one row at a time. The page in "Target" opens first. Rows are plain choices:
+ * nothing here runs code.
+ */
+export function BrowserSteps({ d, set }: { d: Draft; set: (patch: Partial<Draft>) => void }) {
+  const setRow = (i: number, patch: Partial<BrowserStepDraft>) =>
+    set({ browser: d.browser.map((r, n) => (n === i ? { ...r, ...patch } : r)) });
+  const move = (i: number, by: -1 | 1) => {
+    const next = [...d.browser];
+    const [row] = next.splice(i, 1);
+    next.splice(i + by, 0, row!);
+    set({ browser: next });
+  };
+  return (
+    <div className="space-y-4">
+      <p className="text-muted-foreground text-sm">
+        The target opens first. Then, in order, add what a visitor does and what they should see. If
+        a step can&apos;t be done within 10 seconds the check fails and says which one.
+      </p>
+      {d.browser.map((r, i) => (
+        <fieldset key={i} className="space-y-3 rounded-2xl border p-4">
+          <legend className="px-2 text-sm font-semibold">Step {i + 1}</legend>
+          <Field label="Action" htmlFor={`b-${i}-do`}>
+            <SelectField
+              id={`b-${i}-do`}
+              value={r.do}
+              onValueChange={(action) => setRow(i, { do: action })}
+              options={ACTIONS}
+            />
+          </Field>
+          {r.do === "goto" && (
+            <Field label="Address" htmlFor={`b-${i}-url`}>
+              <Input
+                id={`b-${i}-url`}
+                value={r.url}
+                placeholder="https://example.com/account"
+                onChange={(e) => setRow(i, { url: e.target.value })}
+              />
+            </Field>
+          )}
+          {(r.do === "click" ||
+            r.do === "fill" ||
+            r.do === "wait_for" ||
+            r.do === "expect_text") && (
+            <Field
+              label={r.do === "expect_text" ? "Inside (optional)" : "Which element"}
+              htmlFor={`b-${i}-sel`}
+              hint={
+                r.do === "expect_text"
+                  ? "A selector to look in. Empty: anywhere on the page."
+                  : "A CSS selector like #email or button[type=submit], or text=Sign in."
+              }
+            >
+              <Input
+                id={`b-${i}-sel`}
+                value={r.selector}
+                maxLength={200}
+                onChange={(e) => setRow(i, { selector: e.target.value })}
+              />
+            </Field>
+          )}
+          {r.do === "fill" && (
+            <Field
+              label="Text"
+              htmlFor={`b-${i}-value`}
+              hint="Use {{secret.NAME}} for a password; it is typed but never shown."
+            >
+              <Input
+                id={`b-${i}-value`}
+                value={r.value}
+                maxLength={500}
+                placeholder="{{secret.TEST_PASSWORD}}"
+                onChange={(e) => setRow(i, { value: e.target.value })}
+              />
+            </Field>
+          )}
+          {r.do === "press" && (
+            <Field label="Key" htmlFor={`b-${i}-key`}>
+              <SelectField
+                id={`b-${i}-key`}
+                value={r.key}
+                onValueChange={(key) => setRow(i, { key })}
+                options={["Enter", "Tab", "Escape"].map((k) => ({ value: k as "Enter", label: k }))}
+              />
+            </Field>
+          )}
+          {r.do === "expect_text" && (
+            <Field label="Text" htmlFor={`b-${i}-text`}>
+              <Input
+                id={`b-${i}-text`}
+                value={r.text}
+                maxLength={200}
+                placeholder="Welcome back"
+                onChange={(e) => setRow(i, { text: e.target.value })}
+              />
+            </Field>
+          )}
+          {r.do === "expect_url" && (
+            <Field label="Contains" htmlFor={`b-${i}-contains`}>
+              <Input
+                id={`b-${i}-contains`}
+                value={r.contains}
+                maxLength={200}
+                placeholder="/dashboard"
+                onChange={(e) => setRow(i, { contains: e.target.value })}
+              />
+            </Field>
+          )}
+          {r.do === "wait" && (
+            <Field label="Milliseconds" htmlFor={`b-${i}-ms`} hint="Between 100 and 5000.">
+              <Input
+                id={`b-${i}-ms`}
+                inputMode="numeric"
+                value={r.ms}
+                onChange={(e) => setRow(i, { ms: e.target.value.replace(/[^0-9]/g, "") })}
+              />
+            </Field>
+          )}
+          <div className="flex gap-1">
+            <RowButton onClick={() => i > 0 && move(i, -1)}>Move up</RowButton>
+            <RowButton onClick={() => i < d.browser.length - 1 && move(i, 1)}>Move down</RowButton>
+            <RowButton onClick={() => set({ browser: d.browser.filter((_, n) => n !== i) })}>
+              Remove
+            </RowButton>
+          </div>
+        </fieldset>
+      ))}
+      {d.browser.length < 20 && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => set({ browser: [...d.browser, emptyBrowserStep()] })}
+        >
+          Add a step
+        </Button>
+      )}
+      <div className="space-y-2">
+        <p className="text-sm font-semibold">Secrets</p>
+        <SecretFields rows={d.secrets} onChange={(secrets) => set({ secrets })} />
+      </div>
     </div>
   );
 }

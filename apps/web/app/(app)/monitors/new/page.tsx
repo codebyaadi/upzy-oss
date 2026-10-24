@@ -10,6 +10,7 @@ import { ViewOnlyNote } from "@/components/app/can";
 import {
   FlowSteps,
   HeartbeatFields,
+  BrowserSteps,
   HttpOptions,
   RegionPicker,
 } from "@/components/app/monitor-fields";
@@ -43,6 +44,11 @@ const TYPES = {
     placeholder: "",
     hint: "Your job calls a web address when it finishes. You're alerted if it stops.",
   },
+  synthetic: {
+    label: "Browser (page or login)",
+    placeholder: "https://example.com/login",
+    hint: "A real browser opens the page, does the steps you list, and checks what appears.",
+  },
   tcp: { label: "TCP port", placeholder: "db.example.com:5432", hint: "Format host:port." },
   dns: {
     label: "DNS",
@@ -71,6 +77,8 @@ export default function NewMonitorPage() {
   } | null>(null);
   const ai = useApi("ai-settings", () => unwrap(api.ai.settings.get()));
   const { run, isPending } = useAction();
+  const caps = useApi("monitor-regions", () => unwrap(api.monitor.regions.get()));
+  const browserOn = caps.data?.browser.enabled ?? false;
 
   /** Fills the form from the model's draft. The person still reviews and submits: nothing is created here. */
   const askAi = async () => {
@@ -118,13 +126,16 @@ export default function NewMonitorPage() {
         ...(d.type === "flow" || d.type === "heartbeat" ? {} : { target: d.target.trim() }),
         interval: d.type === "heartbeat" ? 60 : Number(d.every),
         failureThreshold: d.type === "heartbeat" ? 1 : Number(d.threshold),
-        ...(d.type !== "heartbeat" ? { regions: d.regions } : {}),
+        ...(d.type !== "heartbeat" && d.type !== "synthetic" ? { regions: d.regions } : {}),
         ...(d.type !== "heartbeat" && d.slowMs.trim()
           ? { latencyThresholdMs: Number(d.slowMs) }
           : {}),
         active: true,
         config: configOf(d),
-        secrets: d.type === "http" || d.type === "flow" ? secretsForCreate(d.secrets) : {},
+        secrets:
+          d.type === "http" || d.type === "flow" || d.type === "synthetic"
+            ? secretsForCreate(d.secrets)
+            : {},
       };
       const created = await unwrap(api.monitor.post(body as never));
       toast.success("Monitor created", {
@@ -217,10 +228,9 @@ export default function NewMonitorPage() {
               id="type"
               value={d.type}
               onValueChange={(type) => set({ type })}
-              options={Object.entries(TYPES).map(([k, v]) => ({
-                value: k as Type,
-                label: v.label,
-              }))}
+              options={Object.entries(TYPES)
+                .filter(([k]) => k !== "synthetic" || browserOn)
+                .map(([k, v]) => ({ value: k as Type, label: v.label }))}
             />
           </Field>
           {d.type !== "flow" && d.type !== "heartbeat" && (
@@ -254,6 +264,7 @@ export default function NewMonitorPage() {
             </>
           )}
           {d.type === "flow" && <FlowSteps d={d} set={set} />}
+          {d.type === "synthetic" && <BrowserSteps d={d} set={set} />}
           {d.type === "heartbeat" ? (
             <HeartbeatFields d={d} set={set} />
           ) : (
@@ -264,7 +275,7 @@ export default function NewMonitorPage() {
                   value={d.every}
                   onValueChange={(every) => set({ every })}
                   options={[
-                    { value: "60", label: "1 minute" },
+                    ...(d.type === "synthetic" ? [] : [{ value: "60", label: "1 minute" }]),
                     { value: "300", label: "5 minutes" },
                     { value: "600", label: "10 minutes" },
                     { value: "1800", label: "30 minutes" },
@@ -302,7 +313,7 @@ export default function NewMonitorPage() {
               </Field>
             </div>
           )}
-          {d.type !== "heartbeat" && (
+          {d.type !== "heartbeat" && d.type !== "synthetic" && (
             <RegionPicker value={d.regions} onChange={(regions) => set({ regions })} />
           )}
           <Button type="submit" size="lg" className="w-full" loading={busy}>

@@ -1,8 +1,9 @@
 import { createGateway, createModelDiscovery, loadAiConfig, createDbStores } from "@upzy/ai";
-import { createDb } from "@upzy/db";
+import { browserEndpoint, createDb } from "@upzy/db";
 import { z } from "zod";
 
 import { runAgent } from "./roles/agent";
+import { runBrowserProber } from "./roles/browser";
 import { runCorrelator } from "./roles/correlator";
 import { runDiscovery } from "./roles/discovery";
 import { parseLifecycle, runLifecycle } from "./roles/lifecycle";
@@ -17,6 +18,7 @@ const Env = z.object({
   DATABASE_URL: z.string().min(1),
   WORKER_ROLES: z.string().default("scheduler,prober,notifier,scanner,agent,correlator"),
   UPZY_ENCRYPTION_KEY: z.string().min(1),
+  BROWSER_WS_ENDPOINT: z.string().optional(),
   APP_URL: z.string().default("http://localhost:3001"),
   SMTP_URL: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
@@ -46,6 +48,17 @@ if (roles.has("scheduler")) {
 }
 if (roles.has("prober"))
   running.push(runProber(db, controller.signal, { encryptionKey: env.UPZY_ENCRYPTION_KEY }));
+if (roles.has("browser")) {
+  const endpoint = browserEndpoint(process.env);
+  if (endpoint)
+    running.push(
+      runBrowserProber(db, controller.signal, { encryptionKey: env.UPZY_ENCRYPTION_KEY, endpoint }),
+    );
+  else
+    console.error(
+      "[browser] the browser role needs BROWSER_WS_ENDPOINT (ws:// or wss://); it is not running",
+    );
+}
 if (roles.has("scanner")) {
   running.push(runScanner(db, controller.signal));
   running.push(runDiscovery(db, controller.signal));

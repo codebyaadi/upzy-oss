@@ -42,6 +42,8 @@ x-server: &server
     NVD_API_KEY: ${NVD_API_KEY:-}
     GOOGLE_SAFE_BROWSING_KEY: ${GOOGLE_SAFE_BROWSING_KEY:-}
     PROBE_REGIONS: ${PROBE_REGIONS:-}
+    # Browser monitors (optional). Needs the browser profile: see docs/BROWSER-MONITORS.md
+    BROWSER_WS_ENDPOINT: ${BROWSER_WS_ENDPOINT:-}
     AI_RPM_LIMIT: ${AI_RPM_LIMIT:-60}
     AI_ORG_DAILY_TOKEN_BUDGET: ${AI_ORG_DAILY_TOKEN_BUDGET:-200000}
 
@@ -101,6 +103,7 @@ services:
       <<: *server-env
       WORKER_ROLES: ${WORKER_ROLES:-scheduler,prober,notifier,scanner,agent,correlator}
       WORKER_REGION: ${WORKER_REGION:-primary}
+      BROWSER_PROXY_HOST: ${BROWSER_PROXY_HOST:-worker}
       # Housekeeping (runs with the scheduler role): how long monitor checks and finished jobs are kept.
       CHECK_RETENTION_DAYS: ${CHECK_RETENTION_DAYS:-90}
       JOB_RETENTION_DAYS: ${JOB_RETENTION_DAYS:-14}
@@ -111,7 +114,25 @@ services:
       CLIENT_REPORTS: ${CLIENT_REPORTS:-on}
     depends_on:
       migrate: { condition: service_completed_successfully }
-    networks: [db, edge]
+    networks: [db, edge, browser]
+
+  # Optional: the browser for browser monitors. Start it with COMPOSE_PROFILES=browser. It shares a network with the
+  # worker only (no database, no secrets) and everything it requests goes through the worker's checking proxy.
+  browser:
+    profiles: [browser]
+    image: ghcr.io/${UPZY_IMAGE_REPO}-browser:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    init: true
+    environment:
+      BROWSER_TOKEN: ${BROWSER_TOKEN:-}
+      BROWSER_MAX_CLIENTS: ${BROWSER_MAX_CLIENTS:-3}
+    shm_size: 1gb
+    mem_limit: 2g
+    pids_limit: 512
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: [/tmp]
+    networks: [browser]
 
   web:
     image: ghcr.io/${UPZY_IMAGE_REPO}-web:${IMAGE_TAG:-latest}
@@ -204,3 +225,5 @@ networks:
   db:
     internal: true
   edge: {}
+  # Between the worker and the browser container, and nothing else.
+  browser: {}

@@ -25,6 +25,7 @@ import {
 } from "@/components/app/ui";
 import { api } from "@/lib/api";
 import { dateTime, duration, ms, pct, timeAgo } from "@/lib/format";
+import { kindLabel } from "@/lib/monitor-form";
 import { useAction } from "@/lib/use-action";
 import { unwrap, useApi } from "@/lib/use-api";
 
@@ -97,7 +98,7 @@ export default function MonitorDetailPage() {
             <StatusPill status={status} />
           </div>
           <p className="text-muted-foreground mt-2 break-all">
-            <span className="uppercase">{m.type}</span>
+            <span className="uppercase">{kindLabel(m.type)}</span>
             {m.type === "heartbeat"
               ? " · waits for pings"
               : ` · ${m.target} · every ${m.interval / 60} min`}

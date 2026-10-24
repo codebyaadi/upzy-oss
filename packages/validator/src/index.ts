@@ -7,3 +7,4 @@ export * from "./status-page";
 export * from "./onboarding";
 export * from "./monitor-checks";
 export * from "./maintenance";
+export * from "./browser";

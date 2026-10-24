@@ -47,7 +47,9 @@ export default function Bot() {
           /.env and /.git/HEAD) and check whether common database and remote-access ports accept a
           connection. A monitor the site's owner set up may send the headers, body or login steps
           that owner configured for their own service, and nothing else. It follows redirects a few
-          hops and does not run JavaScript.
+          hops and does not run JavaScript, except for a browser monitor: when the site's owner sets
+          one up, a real browser opens the page, runs its scripts and does the steps that owner
+          listed (such as signing in with a test account).
         </P>
       </Section>
 
