@@ -115,7 +115,8 @@ services:
       WORKER_REGION: ${WORKER_REGION:-primary}
       BROWSER_PROXY_HOST: ${BROWSER_PROXY_HOST:-worker}
       # Housekeeping (runs with the scheduler role): how long monitor checks and finished jobs are kept.
-      CHECK_RETENTION_DAYS: ${CHECK_RETENTION_DAYS:-90}
+      CHECK_RETENTION_DAYS: ${CHECK_RETENTION_DAYS:-30}
+      ROLLUP_RETENTION_DAYS: ${ROLLUP_RETENTION_DAYS:-365}
       METRICS_INTERVAL_SECONDS: ${METRICS_INTERVAL_SECONDS:-60}
       # Checks in flight at once, and database connections for the worker (checks use at most two fewer).
       PROBER_CONCURRENCY: ${PROBER_CONCURRENCY:-200}

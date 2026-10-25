@@ -1,8 +1,18 @@
-import { index, integer, pgTable, text } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { createdAt, id, jsonb } from "./_helpers";
 import { organizations, users } from "./auth";
 import { workspaceId } from "./workspaces";
+
+/**
+ * Small facts about the installation itself, such as "this one-time notice has been given". One row per key; the value
+ * is JSON. Nothing a customer sets lives here.
+ */
+export const systemState = pgTable("system_state", {
+  key: text("key").primaryKey(),
+  value: jsonb<Record<string, unknown>>("value").notNull().default({}),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const apiKeys = pgTable("api_keys", {
   id: id(),

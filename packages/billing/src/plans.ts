@@ -18,6 +18,8 @@ export interface Limits {
   regions: number;
   /** Browser monitors: real-browser checks of a page or a login. They are heavy, so they are counted separately. */
   browserMonitors: number;
+  /** How many days of response-time history (charts, uptime, reports) the organization keeps. */
+  historyDays: number;
   /** Single sign-on through the organization's own identity provider (Okta, Entra, Google Workspace, Keycloak). */
   sso: boolean;
 }
@@ -51,6 +53,7 @@ export const PLANS: Record<PlanId, Plan> = {
       clientReports: false,
       regions: 1,
       browserMonitors: 0,
+      historyDays: 7,
       sso: false,
     },
   },
@@ -69,6 +72,7 @@ export const PLANS: Record<PlanId, Plan> = {
       clientReports: false,
       regions: 2,
       browserMonitors: 2,
+      historyDays: 90,
       sso: false,
     },
   },
@@ -87,6 +91,7 @@ export const PLANS: Record<PlanId, Plan> = {
       clientReports: false,
       regions: 3,
       browserMonitors: 5,
+      historyDays: 365,
       sso: false,
     },
   },
@@ -105,6 +110,7 @@ export const PLANS: Record<PlanId, Plan> = {
       clientReports: true,
       regions: 5,
       browserMonitors: 20,
+      historyDays: 365,
       sso: true,
     },
   },
@@ -124,6 +130,7 @@ export const PLANS: Record<PlanId, Plan> = {
       clientReports: true,
       regions: Infinity,
       browserMonitors: Infinity,
+      historyDays: Infinity,
       sso: true,
     },
   },
@@ -168,3 +175,10 @@ export const browserMonitorsMessage = (plan: PlanId, max: number) =>
 
 export const ssoMessage = (plan: PlanId) =>
   `Single sign-on isn't included in the ${PLANS[plan].name} plan. Upgrade to Agency under Settings → Billing.`;
+
+export const historyLabel = (days: number) =>
+  !Number.isFinite(days)
+    ? "Unlimited history"
+    : days >= 365
+      ? `${Math.round(days / 365)} year of history`
+      : `${days} days of history`;

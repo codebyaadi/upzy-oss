@@ -152,8 +152,10 @@ export default function Privacy() {
             delete it.
           </li>
           <li>
-            Monitoring history (the result of each individual check): 90 days. Incidents and
-            security findings are part of your account data and are kept as described above.
+            Monitoring history: the result of each individual check is kept for 30 days. The
+            summaries behind charts, uptime and reports are kept for as long as your plan includes
+            (7 days on Free, 90 on Starter, one year on Pro and Agency). Incidents and security
+            findings are part of your account data and are kept as described above.
           </li>
           <li>
             When you delete your account or an organization in the app (Account page), it is removed

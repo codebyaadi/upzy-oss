@@ -1,4 +1,4 @@
-import { PLANS, type PlanId } from "@upzy/billing";
+import { PLANS, historyLabel, type PlanId } from "@upzy/billing";
 import { cn } from "@upzy/ui/lib/utils";
 
 const SHOWN: PlanId[] = ["free", "starter", "pro", "agency"];
@@ -20,6 +20,7 @@ export function planFeatures(id: PlanId): string[] {
     ...(l.customLogo && id !== "unlimited" ? ["Your client's logo on status pages"] : []),
     ...(l.clientReports && id !== "unlimited" ? ["Scheduled reports emailed to your clients"] : []),
     ...(l.sso && id !== "unlimited" ? ["Single sign-on with your identity provider"] : []),
+    ...(id !== "unlimited" ? [historyLabel(l.historyDays)] : []),
     "Unlimited team members",
     "Health score and fix instructions",
     "AI help on your own provider key",

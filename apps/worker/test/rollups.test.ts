@@ -235,7 +235,7 @@ run("check rollups (postgres)", () => {
       (await db.select().from(monitorCheckRollups).where(eq(monitorCheckRollups.monitorId, m.id)))
         .length,
     ).toBe(2);
-    await purgeOldRows(db, parseRetention({ CHECK_RETENTION_DAYS: "90" }));
+    await purgeOldRows(db, parseRetention({ ROLLUP_RETENTION_DAYS: "100" }));
     expect(
       (await db.select().from(monitorCheckRollups).where(eq(monitorCheckRollups.monitorId, m.id)))
         .length,

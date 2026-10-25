@@ -143,7 +143,7 @@ Billing is off by default. With no payment keys set, nothing is limited, which i
 - **CVE matching is version-based.** Distributions backport fixes without changing versions, so findings say to confirm against your vendor's advisory.
 - **Certificate-transparency sources are flaky.** crt.sh often returns 502; discovery falls back to certspotter, which is less complete. A full outage retries in an hour.
 - The first scan of a site with several detected components takes tens of seconds because NVD is rate limited. Results are cached for 24 hours.
-- Old data is cleaned up automatically: monitor checks are kept for 90 days by default (`CHECK_RETENTION_DAYS`, minimum 35 or `off`), finished background jobs for 14. Incidents and findings are kept.
+- Old data is cleaned up automatically: each monitor check is kept for 30 days by default (`CHECK_RETENTION_DAYS`, minimum 7 or `off`), the summaries behind charts and reports for a year where billing is off (`ROLLUP_RETENTION_DAYS`, minimum 35 or `off`) or as long as the plan includes where it is on, and finished background jobs for 14. Incidents and findings are kept.
 - **Account and organization deletion are self-service** (Account page in the user menu). An owner deletes an organization by typing its name; a paid subscription is cancelled first. Deleting an account removes the organizations you were alone in, and is refused while you are the only owner of one with other people in it.
 - **Lifecycle emails** (welcome, a nudge to fix your first finding, a heads-up before a trial ends) go out through the same SMTP settings. Each has a one-click unsubscribe, and `LIFECYCLE_EMAILS=off` stops them.
 
