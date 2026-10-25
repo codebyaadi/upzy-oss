@@ -22,7 +22,15 @@ export const jobs = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    index("jobs_claim_idx").on(t.queue, t.state, t.runAt),
+    // Only waiting jobs are looked up by queue and time, so the index holds only them: it stays small however many
+    // finished jobs the table keeps.
+    index("jobs_claim_idx")
+      .on(t.queue, t.runAt)
+      .where(sql`${t.state} = 'queued'`),
+    // The sweep that returns jobs whose worker died finds them by lock time.
+    index("jobs_running_idx")
+      .on(t.lockedAt)
+      .where(sql`${t.state} = 'running'`),
     uniqueIndex("jobs_dedupe_active_key")
       .on(t.queue, t.dedupeKey)
       .where(sql`${t.state} in ('queued', 'running')`),

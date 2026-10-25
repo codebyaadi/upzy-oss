@@ -32,5 +32,5 @@ export const runBrowserProber = (
             userAgent: botUserAgent(),
           }),
       }),
-    { concurrency: opts.concurrency ?? 2, signal },
+    { concurrency: opts.concurrency ?? 2, signal, discardWhenDone: true },
   );

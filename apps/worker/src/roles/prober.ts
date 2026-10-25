@@ -284,6 +284,7 @@ export const runProber = (
     checkQueue(REGION),
     (payload) =>
       handleCheck(db, payload, { encryptionKey: opts.encryptionKey, probe: opts.probe, gate }),
-    { concurrency: opts.concurrency ?? config.concurrency, signal },
+    // A check's job has nothing worth keeping once it has run: its result is the check row.
+    { concurrency: opts.concurrency ?? config.concurrency, signal, discardWhenDone: true },
   );
 };

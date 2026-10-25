@@ -1,7 +1,7 @@
 import type { Db } from "@upzy/db";
 import { BROWSER_QUEUE, browserEndpoint, checkQueue, regionsOf, schema } from "@upzy/db";
-import { enqueue } from "@upzy/queue";
-import { and, eq, lte, ne, sql } from "drizzle-orm";
+import { enqueueMany, type NewJob } from "@upzy/queue";
+import { and, eq, inArray, lte, ne, sql } from "drizzle-orm";
 
 export const CHECK_QUEUE = "check";
 export interface CheckJob {
@@ -38,30 +38,42 @@ export async function scheduleDue(db: Db, batch = 200): Promise<number> {
       .limit(batch)
       .for("update", { skipLocked: true });
 
+    if (due.length === 0) return 0;
+
+    // One statement moves every due monitor's next run forward by its own interval, and one inserts every job, so
+    // the number of round trips does not grow with the number of monitors (and the row locks are held briefly).
+    await tx
+      .update(monitors)
+      .set({ nextRun: sql`now() + ${monitors.interval} * interval '1 second'` })
+      .where(
+        inArray(
+          monitors.id,
+          due.map((m) => m.id),
+        ),
+      );
+
+    const jobs: NewJob<CheckJob>[] = [];
     for (const m of due) {
-      await tx
-        .update(monitors)
-        .set({ nextRun: sql`now() + ${`${m.interval} seconds`}::interval` })
-        .where(eq(monitors.id, m.id));
       // A browser check runs where the browser is, not per region.
       if (m.type === "synthetic") {
-        await enqueue<CheckJob>(
-          tx,
-          BROWSER_QUEUE,
-          { monitorId: m.id, region: "local" },
-          { dedupeKey: `${m.id}:browser`, maxAttempts: 1 },
-        );
+        jobs.push({
+          queue: BROWSER_QUEUE,
+          payload: { monitorId: m.id, region: "local" },
+          dedupeKey: `${m.id}:browser`,
+          maxAttempts: 1,
+        });
         continue;
       }
       // One job per region, each on its own queue so only that region's probers pick it up.
       for (const region of regionsOf(m))
-        await enqueue<CheckJob>(
-          tx,
-          checkQueue(region),
-          { monitorId: m.id, region },
-          { dedupeKey: `${m.id}:${region}`, maxAttempts: 2 },
-        );
+        jobs.push({
+          queue: checkQueue(region),
+          payload: { monitorId: m.id, region },
+          dedupeKey: `${m.id}:${region}`,
+          maxAttempts: 2,
+        });
     }
+    await enqueueMany(tx, jobs);
     return due.length;
   });
 }

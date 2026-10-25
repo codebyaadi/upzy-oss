@@ -49,6 +49,34 @@ export async function enqueue<T>(
   return rows[0]?.id ?? null;
 }
 
+/** One job to enqueue in a batch. */
+export interface NewJob<T = unknown> extends EnqueueOptions {
+  queue: string;
+  payload: T;
+}
+
+/**
+ * Enqueues many jobs in one statement. Jobs whose dedupe key is already queued or running are skipped, as with
+ * `enqueue`. Returns how many were actually inserted.
+ */
+export async function enqueueMany<T>(db: Executor, items: NewJob<T>[]): Promise<number> {
+  if (items.length === 0) return 0;
+  const rows = await db
+    .insert(jobs)
+    .values(
+      items.map((i) => ({
+        queue: i.queue,
+        payload: i.payload as object,
+        runAt: i.runAt,
+        maxAttempts: i.maxAttempts,
+        dedupeKey: i.dedupeKey,
+      })),
+    )
+    .onConflictDoNothing()
+    .returning({ id: jobs.id });
+  return rows.length;
+}
+
 export const backoffMs = (attempt: number) => Math.min(5 * 60_000, 2 ** attempt * 1000);
 
 /** Atomically claims up to `limit` due jobs. Concurrent workers never receive the same row. */
@@ -85,6 +113,11 @@ export async function complete(db: Executor, id: string) {
   await db.execute(sql`update jobs set state = 'done', locked_at = null where id = ${id}`);
 }
 
+/** Removes a finished job. For queues whose history nobody reads (checks): one fewer row to update and to keep. */
+export async function discard(db: Executor, id: string) {
+  await db.execute(sql`delete from jobs where id = ${id}`);
+}
+
 /** Retries with exponential backoff until `maxAttempts`, then marks the job failed. */
 export async function fail(db: Executor, job: Job, error: unknown) {
   const message = (error instanceof Error ? error.message : String(error)).slice(0, 2000);
@@ -108,6 +141,8 @@ export async function requeueStale(db: Executor, staleAfterMs = 5 * 60_000) {
 }
 
 export interface WorkOptions {
+  /** Delete a job when it succeeds instead of keeping it as `done`. Failed jobs are always kept. */
+  discardWhenDone?: boolean;
   concurrency?: number;
   pollMs?: number;
   signal?: AbortSignal;
@@ -120,7 +155,7 @@ export async function work<T>(
   handler: (payload: T, job: Job<T>) => Promise<void>,
   opts: WorkOptions = {},
 ) {
-  const { concurrency = 5, pollMs = 1000, signal } = opts;
+  const { concurrency = 5, pollMs = 1000, signal, discardWhenDone = false } = opts;
   const inFlight = new Set<Promise<void>>();
   let lastSweep = 0;
 
@@ -144,7 +179,7 @@ export async function work<T>(
         let ok = true;
         try {
           await handler(job.payload as T, job as Job<T>);
-          await complete(db, job.id);
+          await (discardWhenDone ? discard(db, job.id) : complete(db, job.id));
         } catch (e) {
           ok = false;
           await fail(db, job, e).catch((err) => console.error("fail()", err));
