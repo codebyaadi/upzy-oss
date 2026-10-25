@@ -288,6 +288,13 @@
       "when": 1792912721115,
       "tag": "0040_system_state",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792914063867,
+      "tag": "0041_asset_components",
+      "breakpoints": true
     }
   ]
 }

@@ -11,6 +11,7 @@ export {
   type Outcome,
 } from "./run";
 export { fingerprint } from "./fingerprint";
+export { componentFinding } from "./checks/cve";
 export { riskScore } from "./score";
 export {
   newVerificationToken,
@@ -37,7 +38,9 @@ export {
   assessComponents,
   memoryCache,
   loadKev,
+  fetchKevEntries,
   loadEpss,
+  type KevEntry,
   type Assessment,
   type Component,
   type Vuln,

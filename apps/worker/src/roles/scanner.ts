@@ -10,7 +10,7 @@ import {
   type Deps,
   type ScanResult,
 } from "@upzy/security";
-import { and, eq, inArray, lte, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, lte, ne, notInArray, sql } from "drizzle-orm";
 
 import { dbCache, pruneCache } from "../db-cache";
 import { NOTIFY_QUEUE, type FindingNotifyJob } from "./notifier";
@@ -40,12 +40,49 @@ export async function applyScanResult(
   scan: { id: string; workspaceId: string; assetId: string },
   result: ScanResult,
 ) {
-  const { findings, scans, assets } = schema;
+  const { findings, scans, assets, assetComponents } = schema;
   const now = new Date();
 
   await db.transaction(async (tx) => {
     if (result.stack)
       await tx.update(assets).set({ stack: result.stack }).where(eq(assets.id, scan.assetId));
+    // What the page runs, so a vulnerability announced tomorrow can be matched without scanning again. Only when the
+    // page was read: a failed fetch says nothing about what is installed.
+    if (result.components) {
+      const keep = result.components;
+      await tx.delete(assetComponents).where(
+        keep.length
+          ? and(
+              eq(assetComponents.assetId, scan.assetId),
+              notInArray(
+                sql`${assetComponents.product} || '@' || ${assetComponents.version}`,
+                keep.map((c) => `${c.product}@${c.version}`),
+              ),
+            )
+          : eq(assetComponents.assetId, scan.assetId),
+      );
+      for (const c of keep)
+        await tx
+          .insert(assetComponents)
+          .values({
+            assetId: scan.assetId,
+            product: c.product,
+            version: c.version,
+            display: c.display,
+            detectedFrom: c.detectedFrom,
+            lookup: c.lookup,
+            lastSeen: now,
+          })
+          .onConflictDoUpdate({
+            target: [assetComponents.assetId, assetComponents.product, assetComponents.version],
+            set: {
+              display: c.display,
+              detectedFrom: c.detectedFrom,
+              lookup: c.lookup,
+              lastSeen: now,
+            },
+          });
+    }
     // Before upserting, learn which findings are new or coming back, so only those notify.
     const known = new Map(
       (

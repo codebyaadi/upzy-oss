@@ -11,6 +11,7 @@ import { tlsCheck, tlsLegacyCheck } from "./checks/tls";
 import { defaultDeps } from "./deps";
 import { detectStack, type Stack } from "./stack";
 import type { AssetRef, Check, CheckContext, Deps, FindingDraft } from "./types";
+import { detectComponents, type Component } from "./vuln";
 
 export const PASSIVE_CHECKS: Check[] = [
   headersCheck,
@@ -39,6 +40,8 @@ export interface ScanResult {
   errors: Record<string, string>;
   /** What the site runs on, when the page could be fetched. */
   stack?: Stack;
+  /** Versioned software seen on the page, when it could be fetched. Absent means "unknown", not "none". */
+  components?: Component[];
 }
 
 export const hostOf = (asset: AssetRef) =>
@@ -115,5 +118,9 @@ export async function runChecks(
     }),
   );
   result.stack = await stack;
+  result.components = await ctx.deps
+    .fetch(ctx.url)
+    .then((res) => detectComponents(res))
+    .catch(() => undefined);
   return result;
 }

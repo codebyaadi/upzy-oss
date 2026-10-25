@@ -7,7 +7,8 @@ const TOP = 10;
 const CAVEAT =
   "This is based on the version the server or page reports. Distributions often backport security fixes without changing the version, so confirm against your vendor's advisory before treating it as confirmed.";
 
-function toFinding({ component, vulns, severity }: Assessment): FindingDraft {
+/** The finding for one assessed component. */
+export function componentFinding({ component, vulns, severity }: Assessment): FindingDraft {
   const kevCount = vulns.filter((v) => v.kev).length;
   const fixedIn = vulns
     .map((v) => v.fixedIn)
@@ -60,6 +61,6 @@ export const cveCheck: Check = {
     const page = await deps.fetch(url);
     const components = detectComponents(page);
     if (components.length === 0) return [];
-    return (await assessComponents(deps.vuln, components)).map(toFinding);
+    return (await assessComponents(deps.vuln, components)).map(componentFinding);
   },
 };

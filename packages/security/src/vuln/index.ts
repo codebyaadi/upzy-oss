@@ -1,5 +1,6 @@
 export { detectComponents } from "./tech";
-export { assessComponents, loadKev, loadEpss, byPriority } from "./enrich";
+export { assessComponents, loadKev, loadEpss, fetchKevEntries, byPriority } from "./enrich";
+export type { KevEntry } from "./enrich";
 export { queryOsv, compareVersions } from "./osv";
 export { queryNvd } from "./nvd";
 export { httpJson, memoryCache } from "./http";

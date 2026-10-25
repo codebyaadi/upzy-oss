@@ -12,6 +12,7 @@ import { runNotifier } from "./roles/notifier";
 import { runProber } from "./roles/prober";
 import { parseReports, runReports } from "./roles/reports";
 import { parseRetention, runRetention } from "./roles/retention";
+import { runAdvisories } from "./roles/advisories";
 import { runScanner } from "./roles/scanner";
 import { runScheduler } from "./roles/scheduler";
 
@@ -67,6 +68,7 @@ if (roles.has("browser")) {
 if (roles.has("scanner")) {
   running.push(runScanner(db, controller.signal));
   running.push(runDiscovery(db, controller.signal));
+  running.push(runAdvisories(db, controller.signal));
 }
 if (roles.has("agent")) {
   const aiConfig = loadAiConfig(process.env);

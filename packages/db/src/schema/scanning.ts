@@ -52,6 +52,32 @@ export const assets = pgTable(
   ],
 );
 
+/**
+ * Software found on an asset's page by the last scan (a server header, a CMS, a front-end library). Kept so that when
+ * a vulnerability is announced later, the assets running it can be found without scanning everything again.
+ */
+export const assetComponents = pgTable(
+  "asset_components",
+  {
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => assets.id, { onDelete: "cascade" }),
+    /** Machine name and exact version, e.g. nginx / 1.18.0. */
+    product: text("product").notNull(),
+    version: text("version").notNull(),
+    display: text("display").notNull(),
+    /** What revealed it, e.g. `Server: nginx/1.18.0`. */
+    detectedFrom: text("detected_from").notNull(),
+    /** How its vulnerabilities are looked up (OSV package or NVD CPE). */
+    lookup: jsonb<Record<string, unknown>>("lookup").notNull(),
+    lastSeen: timestamp("last_seen", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.assetId, t.product, t.version] }),
+    index("asset_components_product_idx").on(t.product),
+  ],
+);
+
 export type CheckOutcome = "ok" | "error" | "skipped";
 
 export const scans = pgTable(

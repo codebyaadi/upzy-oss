@@ -21,6 +21,28 @@ export async function loadKev(deps: VulnDeps): Promise<Set<string>> {
   return new Set(ids);
 }
 
+/** One entry of CISA's catalogue: the CVE and the product it affects, as CISA names them. */
+export interface KevEntry {
+  cve: string;
+  vendor: string;
+  product: string;
+}
+
+/** The catalogue with product names, fetched fresh (never from the cache): what tells us a CVE was just added. */
+export async function fetchKevEntries(deps: VulnDeps): Promise<KevEntry[]> {
+  const res = (await deps.http(
+    "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+    { timeoutMs: 60_000 },
+  )) as { vulnerabilities?: { cveID: string; vendorProject?: string; product?: string }[] };
+  const entries = (res.vulnerabilities ?? []).map((v) => ({
+    cve: v.cveID,
+    vendor: v.vendorProject ?? "",
+    product: v.product ?? "",
+  }));
+  if (entries.length === 0) throw new Error("KEV catalogue was empty");
+  return entries;
+}
+
 /** EPSS exploitation probabilities (0..1) for the given CVEs. Cached per CVE for 12h; batches of 100. */
 export async function loadEpss(deps: VulnDeps, cves: string[]): Promise<Map<string, number>> {
   const out = new Map<string, number>();
