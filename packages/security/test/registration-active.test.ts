@@ -202,7 +202,7 @@ describe("legacy TLS protocols", () => {
   test("accepting TLS 1.0 or 1.1 is a medium finding naming what is accepted", async () => {
     const r = await only(tlsLegacyCheck, deps({ tlsLegacy: async (_h, v) => v === "TLSv1" }));
     expect(keys(r)).toEqual(["tls.legacy_protocol_enabled"]);
-    expect(r.findings[0]!.evidence).toEqual({ protocols: ["TLSv1"] });
+    expect(r.findings[0]!.evidence).toMatchObject({ protocols: ["TLSv1"] });
   });
 
   test("a server that refuses both is clean", async () => {

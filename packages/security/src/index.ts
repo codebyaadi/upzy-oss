@@ -8,8 +8,10 @@ export {
   contextFor,
   hostOf,
   type ScanResult,
+  type RunOptions,
   type Outcome,
 } from "./run";
+export { cookieShape, type Proof, type ProofRequest } from "./proof";
 export { fingerprint } from "./fingerprint";
 export { componentFinding } from "./checks/cve";
 export { riskScore } from "./score";

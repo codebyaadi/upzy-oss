@@ -4,7 +4,7 @@ import { createDb, schema } from "@upzy/db";
 import type { FindingDraft, ScanResult } from "@upzy/security";
 import { eq } from "drizzle-orm";
 
-import { applyScanResult } from "../src/roles/scanner";
+import { applyScanResult, newFindingFilter } from "../src/roles/scanner";
 
 // Needs a migrated Postgres: DATABASE_URL=... bun test
 const url = process.env.DATABASE_URL;
@@ -113,6 +113,21 @@ run("applyScanResult (postgres)", () => {
     expect(await status("headers.csp_missing")).toBe("ignored");
     await applyScanResult(db, await scan(), result([], { headers: "ok" }));
     expect(await status("headers.csp_missing")).toBe("ignored");
+  });
+
+  test("only findings that are not already open or ignored count as new (and so get a second look)", async () => {
+    const isNew = await newFindingFilter(db, assetId);
+    // Open (tls.weak_key) and ignored (headers.csp_missing) are known; something never seen, or resolved, is new.
+    expect(isNew(draft("tls.weak_key", { severity: "high" }))).toBe(false);
+    expect(isNew(draft("headers.csp_missing"))).toBe(false);
+    expect(isNew(draft("headers.hsts_missing"))).toBe(true);
+    await applyScanResult(db, await scan(), result([], { tls: "ok" }));
+    expect(await status("tls.weak_key")).toBe("resolved");
+    expect((await newFindingFilter(db, assetId))(draft("tls.weak_key"))).toBe(true);
+    await db
+      .update(findings)
+      .set({ status: "open", resolvedAt: null })
+      .where(eq(findings.checkKey, "tls.weak_key"));
   });
 
   test("skipped families never resolve anything; all-error scans are marked failed", async () => {

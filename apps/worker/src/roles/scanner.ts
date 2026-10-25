@@ -8,6 +8,7 @@ import {
   riskScore,
   runChecks,
   type Deps,
+  type FindingDraft,
   type ScanResult,
 } from "@upzy/security";
 import { and, eq, inArray, lte, ne, notInArray, sql } from "drizzle-orm";
@@ -174,6 +175,25 @@ export async function applyScanResult(
   });
 }
 
+/**
+ * Which findings would be news to the customer: anything not already open or ignored on this asset. Those are what
+ * `runChecks` confirms with a second run before they are reported.
+ */
+export async function newFindingFilter(db: Db, assetId: string) {
+  const { findings } = schema;
+  const known = new Set(
+    (
+      await db
+        .select({ fingerprint: findings.fingerprint, status: findings.status })
+        .from(findings)
+        .where(eq(findings.assetId, assetId))
+    )
+      .filter((r) => r.status !== "resolved")
+      .map((r) => r.fingerprint),
+  );
+  return (f: FindingDraft) => !known.has(fingerprint(assetId, f));
+}
+
 /** Scan dependencies for production: the default network layer, with lookups cached in Postgres. */
 const depsByDb = new WeakMap<Db, Deps>();
 /** One instance per database handle: the NVD rate limiter is keyed on the cache object, so scans must share it. */
@@ -210,7 +230,7 @@ export async function handleScan(
   try {
     const result = await runChecks(
       { kind: asset.kind, value: asset.value },
-      { deps, verified: asset.verified },
+      { deps, verified: asset.verified, isNew: await newFindingFilter(db, assetId) },
     );
     await applyScanResult(db, scan!, result);
     await db.update(assets).set({ lastScanAt: new Date() }).where(eq(assets.id, assetId));
@@ -218,7 +238,7 @@ export async function handleScan(
     await recordHealth(db, assetId).catch((e) => console.error("[scanner:health]", e));
     const failed = Object.entries(result.errors);
     console.log(
-      `[scanner] ${asset.value}: ${result.findings.length} finding(s)${failed.length ? `, errors: ${failed.map(([k, v]) => `${k} (${v})`).join("; ")}` : ""}`,
+      `[scanner] ${asset.value}: ${result.findings.length} finding(s)${result.unconfirmed?.length ? `, ${result.unconfirmed.length} not confirmed by a second run (${result.unconfirmed.join(", ")})` : ""}${failed.length ? `, errors: ${failed.map(([k, v]) => `${k} (${v})`).join("; ")}` : ""}`,
     );
   } catch (e) {
     await db
@@ -265,7 +285,12 @@ export async function handleVerify(db: Db, { findingId }: VerifyJob, deps: Deps 
   try {
     const result = await runChecks(
       { kind: row.asset.kind, value: row.asset.value },
-      { deps, checks, verified: row.asset.verified },
+      {
+        deps,
+        checks,
+        verified: row.asset.verified,
+        isNew: await newFindingFilter(db, row.asset.id),
+      },
     );
     if (result.outcomes[family] !== "ok") {
       await db

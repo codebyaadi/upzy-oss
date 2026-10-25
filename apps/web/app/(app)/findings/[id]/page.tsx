@@ -102,7 +102,10 @@ export default function FindingDetailPage() {
   const cves = Array.isArray(raw.cves) ? (raw.cves as Cve[]) : [];
   const total = typeof raw.total === "number" ? raw.total : cves.length;
   // The CVE list gets its own table; everything else is shown as plain evidence.
-  const evidence = Object.entries(raw).filter(([k]) => !["cves", "total", "kevCount"].includes(k));
+  const evidence = Object.entries(raw).filter(
+    ([k]) => !["cves", "total", "kevCount", "proof"].includes(k),
+  );
+  const proof = parseProof(raw.proof);
 
   return (
     <>
@@ -330,6 +333,7 @@ export default function FindingDetailPage() {
               </ul>
             )}
           </Panel>
+          {proof && <ProofPanel proof={proof} />}
           {evidence.length > 0 && (
             <Panel>
               <h2 className="mb-3 text-xl font-bold tracking-tight">Evidence</h2>
@@ -348,5 +352,65 @@ export default function FindingDetailPage() {
         </div>
       </div>
     </>
+  );
+}
+
+interface ProofRequest {
+  method: string;
+  url: string;
+  finalUrl?: string;
+  status: number;
+  headers: Record<string, string>;
+  cookies?: string[];
+}
+interface Proof {
+  checkedAt: string;
+  requests?: ProofRequest[];
+  confirmedAt?: string;
+}
+
+/** The proof is stored with the finding; trust nothing about its shape, since it is rendered on the page. */
+function parseProof(v: unknown): Proof | null {
+  if (!v || typeof v !== "object") return null;
+  const p = v as Partial<Proof>;
+  if (typeof p.checkedAt !== "string") return null;
+  return {
+    checkedAt: p.checkedAt,
+    confirmedAt: typeof p.confirmedAt === "string" ? p.confirmedAt : undefined,
+    requests: Array.isArray(p.requests)
+      ? p.requests.filter((r) => r && typeof r.url === "string" && typeof r.status === "number")
+      : undefined,
+  };
+}
+
+/** What Upzy asked and what came back, so the finding can be checked by hand. */
+function ProofPanel({ proof }: { proof: Proof }) {
+  return (
+    <Panel>
+      <h2 className="mb-1 text-xl font-bold tracking-tight">How we checked this</h2>
+      <p className="text-muted-foreground mb-3 text-sm">
+        Checked {timeAgo(proof.checkedAt)}
+        {proof.confirmedAt
+          ? ", and seen again by a second check before it was reported."
+          : "."}{" "}
+        Cookie values and page contents are never kept.
+      </p>
+      {proof.requests?.map((r, i) => (
+        <div key={i} className="bg-muted mb-2 rounded-xl px-3 py-2 font-mono text-xs break-all">
+          <p className="font-semibold">
+            {r.method} {r.url} → {r.status}
+          </p>
+          {r.finalUrl && <p>redirected to {r.finalUrl}</p>}
+          {Object.entries(r.headers ?? {}).map(([k, v]) => (
+            <p key={k}>
+              {k}: {String(v)}
+            </p>
+          ))}
+          {r.cookies?.map((c) => (
+            <p key={c}>set-cookie: {c}</p>
+          ))}
+        </div>
+      ))}
+    </Panel>
   );
 }

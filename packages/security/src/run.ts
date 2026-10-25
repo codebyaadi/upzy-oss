@@ -9,6 +9,7 @@ import { registrationCheck, dnssecCheck } from "./checks/registration";
 import { reputationCheck } from "./checks/reputation";
 import { tlsCheck, tlsLegacyCheck } from "./checks/tls";
 import { defaultDeps } from "./deps";
+import { recordFetches, type Proof } from "./proof";
 import { detectStack, type Stack } from "./stack";
 import type { AssetRef, Check, CheckContext, Deps, FindingDraft } from "./types";
 import { detectComponents, type Component } from "./vuln";
@@ -42,6 +43,8 @@ export interface ScanResult {
   stack?: Stack;
   /** Versioned software seen on the page, when it could be fetched. Absent means "unknown", not "none". */
   components?: Component[];
+  /** Findings that were new but not seen again by the second run, so were not reported. */
+  unconfirmed?: string[];
 }
 
 export const hostOf = (asset: AssetRef) =>
@@ -73,16 +76,34 @@ const withTimeout = <T>(p: Promise<T>, ms: number, family: string) =>
     new Promise<T>((_, rej) => setTimeout(() => rej(new Error(`${family} check timed out`)), ms)),
   ]);
 
+/** The identity of a finding within one asset: what makes two runs' findings "the same". */
+const keyOf = (f: Pick<FindingDraft, "checkKey" | "subject">) => `${f.checkKey}
+${f.subject ?? ""}`;
+
+export interface RunOptions {
+  deps?: Deps;
+  checks?: Check[];
+  timeoutMs?: number;
+  verified?: boolean;
+  /**
+   * Whether a finding would be new to the customer (not already open or ignored). Each such finding is checked a second
+   * time, with fresh requests, before it is reported, and dropped if the second run does not see it. A one-off
+   * failure (a timeout, a CDN edge serving something odd) then never becomes an alert.
+   */
+  isNew?: (f: FindingDraft) => boolean;
+  /** Pause before the second run, so it is not answered by the same transient condition. */
+  recheckDelayMs?: number;
+}
+
 /**
  * Runs every applicable passive check. A failing check never aborts the scan: it is recorded as
  * "error" so its previous findings are left alone instead of being wrongly auto-resolved.
+ * Every finding carries `evidence.proof` (when it was checked and the requests behind it).
  */
-export async function runChecks(
-  asset: AssetRef,
-  opts: { deps?: Deps; checks?: Check[]; timeoutMs?: number; verified?: boolean } = {},
-): Promise<ScanResult> {
+export async function runChecks(asset: AssetRef, opts: RunOptions = {}): Promise<ScanResult> {
   const ctx = contextFor(asset, opts.deps);
   const result: ScanResult = { findings: [], outcomes: {}, errors: {} };
+  const checks = opts.checks ?? (opts.verified ? ALL_CHECKS : PASSIVE_CHECKS);
 
   // Same page the headers check reads (the fetch is shared), so detecting the stack costs no extra request.
   const stack = ctx.deps
@@ -90,20 +111,33 @@ export async function runChecks(
     .then((res) => detectStack(res))
     .catch(() => undefined);
 
+  /** One run of one check, its findings stamped with the requests it made. */
+  const runCheck = async (check: Check, c: CheckContext) => {
+    const rec = recordFetches(c.deps, c.host);
+    const drafts = await withTimeout(
+      check.run({ ...c, deps: rec.deps }),
+      check.timeoutMs ?? opts.timeoutMs ?? 30_000,
+      check.family,
+    );
+    const checkedAt = new Date().toISOString();
+    return drafts.map((f) => {
+      const proof: Proof = {
+        checkedAt,
+        ...(rec.requests.length ? { requests: rec.requests } : {}),
+      };
+      return { ...f, evidence: { ...f.evidence, proof } };
+    });
+  };
+
+  const found = new Map<Check, FindingDraft[]>();
   await Promise.all(
-    (opts.checks ?? (opts.verified ? ALL_CHECKS : PASSIVE_CHECKS)).map(async (check) => {
+    checks.map(async (check) => {
       if (!check.appliesTo.includes(asset.kind) || (check.active && !opts.verified)) {
         result.outcomes[check.family] = "skipped";
         return;
       }
       try {
-        result.findings.push(
-          ...(await withTimeout(
-            check.run(ctx),
-            check.timeoutMs ?? opts.timeoutMs ?? 30_000,
-            check.family,
-          )),
-        );
+        found.set(check, await runCheck(check, ctx));
         // Several checks may share a family; one failure must not be overwritten by a later success.
         if (result.outcomes[check.family] !== "error") result.outcomes[check.family] = "ok";
       } catch (e) {
@@ -117,6 +151,48 @@ export async function runChecks(
       }
     }),
   );
+
+  // Validate before reporting: a finding new to the customer must be seen again, by a second run that shares nothing
+  // with the first (no cached page), or it is dropped. Known findings are not re-run: they only refresh.
+  const unconfirmed: string[] = [];
+  const doubtful = [...found].filter(([, drafts]) => drafts.some((f) => opts.isNew?.(f)));
+  if (doubtful.length > 0) {
+    if (opts.recheckDelayMs ?? 1000)
+      await new Promise((r) => setTimeout(r, opts.recheckDelayMs ?? 1000));
+    const fresh = contextFor(asset, opts.deps);
+    await Promise.all(
+      doubtful.map(async ([check, drafts]) => {
+        let again: Set<string> | undefined;
+        try {
+          again = new Set((await runCheck(check, fresh)).map(keyOf));
+        } catch {
+          // Inconclusive is not confirmed. It will be found again by the next scan if it is real.
+        }
+        const confirmedAt = new Date().toISOString();
+        found.set(
+          check,
+          drafts.flatMap((f) => {
+            if (!opts.isNew?.(f)) return [f];
+            if (!again?.has(keyOf(f))) {
+              unconfirmed.push(f.checkKey);
+              return [];
+            }
+            return [
+              {
+                ...f,
+                evidence: {
+                  ...f.evidence,
+                  proof: { ...(f.evidence?.proof as Proof), confirmedAt },
+                },
+              },
+            ];
+          }),
+        );
+      }),
+    );
+  }
+  for (const drafts of found.values()) result.findings.push(...drafts);
+  if (unconfirmed.length) result.unconfirmed = unconfirmed;
   result.stack = await stack;
   result.components = await ctx.deps
     .fetch(ctx.url)
