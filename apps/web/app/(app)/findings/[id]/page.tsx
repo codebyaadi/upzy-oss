@@ -369,16 +369,23 @@ interface Proof {
   confirmedAt?: string;
 }
 
+/** The API client turns ISO timestamps into Dates on the way in; accept either form. */
+const isoOf = (v: unknown): string | undefined =>
+  v instanceof Date ? v.toISOString() : typeof v === "string" ? v : undefined;
+
 /** The proof is stored with the finding; trust nothing about its shape, since it is rendered on the page. */
 function parseProof(v: unknown): Proof | null {
   if (!v || typeof v !== "object") return null;
-  const p = v as Partial<Proof>;
-  if (typeof p.checkedAt !== "string") return null;
+  const p = v as Partial<Record<keyof Proof, unknown>>;
+  const checkedAt = isoOf(p.checkedAt);
+  if (!checkedAt) return null;
   return {
-    checkedAt: p.checkedAt,
-    confirmedAt: typeof p.confirmedAt === "string" ? p.confirmedAt : undefined,
+    checkedAt,
+    confirmedAt: isoOf(p.confirmedAt),
     requests: Array.isArray(p.requests)
-      ? p.requests.filter((r) => r && typeof r.url === "string" && typeof r.status === "number")
+      ? (p.requests as ProofRequest[]).filter(
+          (r) => r && typeof r.url === "string" && typeof r.status === "number",
+        )
       : undefined,
   };
 }
