@@ -19,6 +19,7 @@ import { findingModule } from "./modules/finding";
 import { health } from "./modules/health";
 import { incidentModule } from "./modules/incident";
 import { maintenanceModule } from "./modules/maintenance";
+import { changesModule } from "./modules/changes";
 import { monitorModule } from "./modules/monitor";
 import { onboardingModule } from "./modules/onboarding";
 import { overviewModule } from "./modules/overview";
@@ -140,6 +141,7 @@ export const createApp = ({
         }),
       )
       .use(monitorModule(db, authP, billing, { encryptionKey, apiOrigin }))
+      .use(changesModule(db, authP))
       .use(channelModule(db, authP, encryptionKey))
       .use(alertRuleModule(db, authP))
       .use(incidentModule(db, authP))

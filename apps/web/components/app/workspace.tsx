@@ -9,7 +9,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { TwoFactorSetup } from "@/components/app/two-factor-setup";
 import { ListSkeleton } from "@/components/app/ui";
 import { api } from "@/lib/api";
-import { unwrap, useApi } from "@/lib/use-api";
+import { unwrap, useApi, useLiveChanges } from "@/lib/use-api";
 
 interface Workspace {
   id: string;
@@ -133,7 +133,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       </div>
     );
   if (!value) return <AppLoading />;
-  return <WorkspaceContext value={value}>{children}</WorkspaceContext>;
+  return (
+    <WorkspaceContext value={value}>
+      <LiveChanges workspaceId={value.workspace.id} />
+      {children}
+    </WorkspaceContext>
+  );
+}
+
+function LiveChanges({ workspaceId }: { workspaceId: string }) {
+  useLiveChanges(workspaceId);
+  return null;
 }
 
 /** Shown while the session, role and workspace load: the dashboard's shape, not a blank screen. */
