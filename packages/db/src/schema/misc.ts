@@ -83,3 +83,26 @@ export const webhooks = pgTable("webhooks", {
   events: jsonb("events").notNull(),
   createdAt: createdAt(),
 });
+
+/**
+ * A probe agent: a small program on a machine in some region that fetches checks from the API over HTTPS and posts the
+ * results back, so that machine needs neither database access nor the encryption key. Made by the person running the
+ * installation (apps/api/scripts/create-agent.ts); only the SHA-256 of its token is kept.
+ */
+export const probeAgents = pgTable(
+  "probe_agents",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    /** The region whose checks it takes. One of the installation's PROBE_REGIONS. */
+    region: text("region").notNull(),
+    hashedToken: text("hashed_token").notNull(),
+    prefix: text("prefix").notNull().default(""),
+    version: text("version"),
+    platform: text("platform"),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("probe_agents_hashed_token_key").on(t.hashedToken)],
+);

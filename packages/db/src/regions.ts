@@ -52,3 +52,6 @@ export function regionalVerdict(
     .sort();
   return { down: failing.length * 2 > fresh.length, failing, considered: fresh.length };
 }
+
+/** Results that probe agents have reported, waiting for the main server's worker to record them. */
+export const RESULT_QUEUE = "check.result";

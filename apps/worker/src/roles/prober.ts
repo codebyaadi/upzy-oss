@@ -37,7 +37,7 @@ export async function handleCheck(
     gate?: Gate;
   } = {},
 ) {
-  const { monitors, monitorChecks, monitorRegionState, incidents } = schema;
+  const { monitors } = schema;
   const region = jobRegion ?? REGION;
   const gate = opts.gate ?? openGate;
   const [m] = await gate.run(() => db.select().from(monitors).where(eq(monitors.id, monitorId)));
@@ -64,6 +64,25 @@ export async function handleCheck(
           secrets,
         });
 
+  await recordCheckResult(db, m, region, result, { gate, now: opts.now });
+}
+
+type Monitor = typeof schema.monitors.$inferSelect;
+type Result = Awaited<ReturnType<typeof runProbe>>;
+
+/**
+ * Stores one check's result and moves the monitor's state: history row, rollup, regional verdict, incidents and the
+ * alerts that follow. The same path serves a check this process ran and one an agent ran elsewhere and reported.
+ */
+export async function recordCheckResult(
+  db: Db,
+  m: Monitor,
+  region: string,
+  result: Result,
+  opts: { now?: () => Date; gate?: Gate } = {},
+) {
+  const { monitors, monitorChecks, monitorRegionState, incidents } = schema;
+  const gate = opts.gate ?? openGate;
   await gate.run(() =>
     db.transaction(async (tx) => {
       // A heartbeat is evaluated every minute, but only a change of state is worth a row of history.

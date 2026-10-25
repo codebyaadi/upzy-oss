@@ -43,7 +43,26 @@ A region is a worker running the prober role somewhere else. It reads its checks
 
    Each region listens on its own queue (`check.eu-west`), so a prober only ever receives work for its region. The scheduler on the main server queues one job per region of each monitor.
 
-3. **Open the database to those machines only**: a firewall allow-list of their addresses, TLS, and a user with just the access the worker needs. A prober that can reach Postgres can read everything the worker can, so run these on machines you control. If that is not acceptable, the next step is a probe agent that talks to the API instead of the database (planned, not built).
+3. **Open the database to those machines only**: a firewall allow-list of their addresses, TLS, and a user with just the access the worker needs. A prober that can reach Postgres can read everything the worker can, so run these on machines you control. If that is not acceptable, use a probe agent instead, which talks to the API and needs neither (below).
+
+### Probe agent API (the server side is ready; the agent program is not built yet)
+
+The API has the endpoints a probe agent needs, so a region can run without database access or the encryption key:
+
+1. Create a token for a region (it must be in `PROBE_REGIONS`). It is printed once and only its hash is kept:
+
+   ```bash
+   DATABASE_URL=... bun apps/api/scripts/create-agent.ts eu-west "eu-west vps 1"
+   ```
+
+2. The agent calls, with `Authorization: Bearer <token>`:
+   - `POST /agent/hello` `{version, os, arch}`: says who it is, returns the protocol version and poll interval.
+   - `POST /agent/jobs/pull` `{max}`: returns up to `max` due checks for its region (type, target, config and, for that one check, decrypted secrets).
+   - `POST /agent/jobs/{jobId}/result` `{status, responseMs, statusCode?, error?, errorKind?, ...}`: reports what it measured.
+
+   The agent only measures. The server decides whether the monitor is down and sends every alert, with the same code as for its own checks. A check that is not reported back within minutes goes to another taker. The shapes are defined in `packages/validator/src/agent.ts`.
+
+Secrets travel over TLS to a token-holding agent, so only give a token to a machine you trust as much as the database.
 
 The main server's own worker keeps using `WORKER_REGION=primary` (or unset); that is the `local` region.
 

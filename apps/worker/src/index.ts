@@ -1,5 +1,5 @@
 import { createGateway, createModelDiscovery, loadAiConfig, createDbStores } from "@upzy/ai";
-import { browserEndpoint, createDb } from "@upzy/db";
+import { PRIMARY_REGION, browserEndpoint, createDb, workerRegion } from "@upzy/db";
 import { logQueueMetrics } from "@upzy/queue";
 import { z } from "zod";
 
@@ -10,6 +10,7 @@ import { runCorrelator } from "./roles/correlator";
 import { runDiscovery } from "./roles/discovery";
 import { parseLifecycle, runLifecycle } from "./roles/lifecycle";
 import { runNotifier } from "./roles/notifier";
+import { runResultIngest } from "./roles/probe-results";
 import { runProber } from "./roles/prober";
 import { parseReports, runReports } from "./roles/reports";
 import { parseRetention, runRetention } from "./roles/retention";
@@ -54,6 +55,10 @@ if (roles.has("scheduler")) {
 }
 if (roles.has("prober"))
   running.push(runProber(db, controller.signal, { encryptionKey: env.UPZY_ENCRYPTION_KEY }));
+// Agents report to the API, which queues their results for the main server's worker; regional probers that read the
+// database themselves never take these.
+if (roles.has("prober") && workerRegion() === PRIMARY_REGION)
+  running.push(runResultIngest(db, controller.signal));
 if (roles.has("browser")) {
   const endpoint = browserEndpoint(process.env);
   if (endpoint)

@@ -7,6 +7,7 @@ import { Elysia } from "elysia";
 import { createBilling, type BillingDeps } from "./lib/billing";
 import { accessModule } from "./modules/access";
 import { accountModule } from "./modules/account";
+import { agentModule } from "./modules/agent";
 import { aiModule, type AiDeps } from "./modules/ai";
 import { alertRuleModule } from "./modules/alert-rule";
 import { apiKeyModule } from "./modules/api-keys";
@@ -145,7 +146,11 @@ export const createApp = ({
       .use(monitorModule(db, authP, billing, { encryptionKey, apiOrigin }))
       // Grouped: a very long chain of plugins makes the compiler give up inferring the app type.
       .use(
-        new Elysia().use(changesModule(db, authP)).use(apiKeyModule(db, authP)).use(mcpModule(db)),
+        new Elysia()
+          .use(changesModule(db, authP))
+          .use(apiKeyModule(db, authP))
+          .use(mcpModule(db))
+          .use(agentModule(db, { encryptionKey })),
       )
       .use(channelModule(db, authP, encryptionKey))
       .use(alertRuleModule(db, authP))
