@@ -33,6 +33,19 @@ export const assets = pgTable(
     verified: boolean("verified").notNull().default(false),
     verificationToken: text("verification_token").notNull(),
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    /** Ownership is re-checked weekly; this is when the next check is due. */
+    verifyNextAt: timestamp("verify_next_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Consecutive failed re-checks. Three in a row (daily once one fails) withdraw the verification. */
+    verifyFailures: integer("verify_failures").notNull().default(0),
+    /** Set when a re-check withdrew the verification, so the person is told why active scans stopped. */
+    verificationLostAt: timestamp("verification_lost_at", { withTimezone: true }),
+    /** Third-party hosts the page has loaded scripts, frames and form actions from, and when each first appeared. */
+    pageState: jsonb<{
+      baselineAt: string;
+      scriptHosts: Record<string, string>;
+      frameHosts: Record<string, string>;
+      formHosts: Record<string, string>;
+    }>("page_state"),
     /** The scheduler enqueues a scan once this passes, then pushes it a day out. */
     nextScanAt: timestamp("next_scan_at", { withTimezone: true }).notNull().defaultNow(),
     lastScanAt: timestamp("last_scan_at", { withTimezone: true }),

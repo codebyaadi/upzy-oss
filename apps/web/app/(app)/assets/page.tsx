@@ -220,6 +220,13 @@ export default function AssetsPage() {
                           </span>
                         )}
                       </p>
+                      {!a.verified && a.verificationLostAt && (
+                        <p className="text-destructive mt-1 text-xs">
+                          We could no longer find the ownership record, so deeper checks (exposed
+                          files and open ports) are paused. Add the record again and press Verify
+                          ownership.
+                        </p>
+                      )}
                       {a.discoveryError && (
                         <p className="text-destructive mt-1 text-xs">
                           Subdomain lookup failed and will retry: certificate log services are

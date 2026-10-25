@@ -10,6 +10,7 @@ import { runCorrelator } from "./roles/correlator";
 import { runDiscovery } from "./roles/discovery";
 import { parseLifecycle, runLifecycle } from "./roles/lifecycle";
 import { runNotifier } from "./roles/notifier";
+import { runOwnership } from "./roles/ownership";
 import { runResultIngest } from "./roles/probe-results";
 import { runProber } from "./roles/prober";
 import { parseReports, runReports } from "./roles/reports";
@@ -74,6 +75,7 @@ if (roles.has("scanner")) {
   running.push(runScanner(db, controller.signal));
   running.push(runDiscovery(db, controller.signal));
   running.push(runAdvisories(db, controller.signal));
+  running.push(runOwnership(db, controller.signal));
 }
 if (roles.has("agent")) {
   const aiConfig = loadAiConfig(process.env);

@@ -1,5 +1,6 @@
 import type { SafeFetchOptions, SafeFetchResult } from "@upzy/probes";
 
+import type { PageHosts, PageState } from "./page-state";
 import type { VulnDeps } from "./vuln/types";
 
 export type Severity = "critical" | "high" | "medium" | "low" | "info";
@@ -53,8 +54,16 @@ export interface AssetRef {
   value: string;
 }
 
+/** What the page loads from other sites now, and what has been seen on it over time (see page-state.ts). */
+export interface PageContext {
+  state: PageState;
+  current: PageHosts;
+}
+
 export interface CheckContext {
   asset: AssetRef;
+  /** Absent when the page could not be read as HTML. */
+  page?: PageContext;
   host: string;
   /** Page to inspect over HTTPS. */
   url: string;

@@ -13,6 +13,8 @@ export {
 } from "./run";
 export { cookieShape, type Proof, type ProofRequest } from "./proof";
 export { fingerprint } from "./fingerprint";
+export { extractHosts, mergePageState, siteOf, type PageState, type PageHosts } from "./page-state";
+export { parsePolicy, mxMatches } from "./checks/mta-sts";
 export { componentFinding } from "./checks/cve";
 export { riskScore } from "./score";
 export {

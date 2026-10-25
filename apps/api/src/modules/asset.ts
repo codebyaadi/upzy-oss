@@ -36,6 +36,7 @@ const publicColumns = {
   source: assets.source,
   verified: assets.verified,
   verifiedAt: assets.verifiedAt,
+  verificationLostAt: assets.verificationLostAt,
   lastScanAt: assets.lastScanAt,
   lastDiscoveryAt: assets.lastDiscoveryAt,
   discoveryError: assets.discoveryError,
@@ -193,13 +194,25 @@ export const assetModule = (db: Db, authP: AuthPlugin, billing: Billing) => {
 
           await db
             .update(assets)
-            .set({ verified: true, verifiedAt: new Date() })
+            .set({
+              verified: true,
+              verifiedAt: new Date(),
+              verifyFailures: 0,
+              verificationLostAt: null,
+              verifyNextAt: sql`now() + interval '7 days'`,
+            })
             .where(eq(assets.id, row.id));
           if (row.kind === "domain") {
             // Subdomains of a verified domain are covered too.
             await db
               .update(assets)
-              .set({ verified: true, verifiedAt: new Date() })
+              .set({
+                verified: true,
+                verifiedAt: new Date(),
+                verifyFailures: 0,
+                verificationLostAt: null,
+                verifyNextAt: sql`now() + interval '7 days'`,
+              })
               .where(
                 and(
                   eq(assets.workspaceId, row.workspaceId),

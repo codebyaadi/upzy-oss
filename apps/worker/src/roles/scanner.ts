@@ -47,6 +47,8 @@ export async function applyScanResult(
   await db.transaction(async (tx) => {
     if (result.stack)
       await tx.update(assets).set({ stack: result.stack }).where(eq(assets.id, scan.assetId));
+    if (result.page)
+      await tx.update(assets).set({ pageState: result.page }).where(eq(assets.id, scan.assetId));
     // What the page runs, so a vulnerability announced tomorrow can be matched without scanning again. Only when the
     // page was read: a failed fetch says nothing about what is installed.
     if (result.components) {
@@ -230,7 +232,12 @@ export async function handleScan(
   try {
     const result = await runChecks(
       { kind: asset.kind, value: asset.value },
-      { deps, verified: asset.verified, isNew: await newFindingFilter(db, assetId) },
+      {
+        deps,
+        verified: asset.verified,
+        isNew: await newFindingFilter(db, assetId),
+        previousPage: asset.pageState,
+      },
     );
     await applyScanResult(db, scan!, result);
     await db.update(assets).set({ lastScanAt: new Date() }).where(eq(assets.id, assetId));
@@ -290,6 +297,7 @@ export async function handleVerify(db: Db, { findingId }: VerifyJob, deps: Deps 
         checks,
         verified: row.asset.verified,
         isNew: await newFindingFilter(db, row.asset.id),
+        previousPage: row.asset.pageState,
       },
     );
     if (result.outcomes[family] !== "ok") {

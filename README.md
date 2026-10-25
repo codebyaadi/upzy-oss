@@ -30,7 +30,7 @@ Upzy puts both in one place and keeps the output readable:
     </td>
     <td width="50%" valign="top">
       <h3>Attack-surface scanning</h3>
-      TLS, headers and cookies, SPF/DMARC/CAA, subdomain takeover, and CVEs enriched with CISA KEV and EPSS, and an alert within hours when a CVE is added to the KEV list and affects software one of your sites was seen running. Subdomains found in certificate-transparency logs are offered as suggestions you accept or dismiss.
+      TLS, headers and cookies, SPF/DMARC/CAA and MTA-STS, new third-party scripts and form targets appearing on a page, ownership re-checked weekly before any deeper probing, subdomain takeover, and CVEs enriched with CISA KEV and EPSS, and an alert within hours when a CVE is added to the KEV list and affects software one of your sites was seen running. Subdomains found in certificate-transparency logs are offered as suggestions you accept or dismiss.
     </td>
   </tr>
   <tr>

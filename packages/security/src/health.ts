@@ -34,6 +34,10 @@ const HYGIENE = new Set([
   "headers.version_disclosed",
   "registration.expiring",
   "dnssec.not_enabled",
+  // Optional mail hardening: worth doing, but not what decides whether a domain can be spoofed.
+  "email.mta_sts_missing",
+  "email.mta_sts_not_enforced",
+  "email.tls_rpt_missing",
 ]);
 
 export function categoryOf(checkKey: string): Category {

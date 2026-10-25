@@ -5,7 +5,7 @@ A new organization lands on **Get started** (also linked from the empty Monitors
 1. **An uptime monitor** on the address entered (every 5 minutes, two failures to open an incident).
 2. **A certificate monitor** on the host (checked hourly, with alerts well before expiry).
 3. **A passive security scan** of the domain, which produces the [health score](HEALTH-AND-FIXES.md). The top three findings are listed with links to instructions for the detected stack.
-4. **An optional ownership proof** (a DNS TXT record) with a "Check now" button. Passive checks don't need it.
+4. **An optional ownership proof** (a DNS TXT record) with a "Check now" button. Passive checks don't need it. Ownership is confirmed again every week; if the record is gone for three checks in a row (a few days, never a single failed lookup), the asset goes back to unverified and the deeper checks stop until you add the record and verify again. Subdomains are covered by their verified domain.
 
 The page then points to the usual next steps: alerts, a status page, the health score breakdown and AI help.
 

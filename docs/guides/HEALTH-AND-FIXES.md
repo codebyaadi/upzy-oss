@@ -32,3 +32,11 @@ Findings with no template (known vulnerable components) keep the built-in remedi
 ## Verify fix
 
 On an open finding, **Verify fix** re-runs only that finding's check family (headers, TLS, email, DNS, takeover or CVE) right away, instead of waiting for tomorrow's scan. If the problem is gone the finding turns resolved and you see a "Fixed" message; if it's still there you're told so; if the check couldn't run (a DNS timeout, say) the reason is shown and nothing changes. It sends the same requests a scheduled scan does, only for that family, and is limited to one re-check per finding every 15 seconds. A CDN or browser cache can serve old headers for a few minutes after a change.
+
+## Things that change on a page
+
+Upzy remembers which other sites a page loads scripts and frames from and posts forms to. The first scan only records them. After that, a **new third-party script**, **external form target** or **embedded frame** is reported, because that is how hacked sites and compromised vendors usually show up (a card skimmer is one added script). If you added it on purpose, press Ignore; it will not come back. The finding clears by itself when the host is gone from the page.
+
+## Mail transport security
+
+For domains that receive mail, Upzy also checks **MTA-STS** (a policy that tells other mail servers to deliver only over verified TLS, so a network attacker cannot downgrade the connection) and **TLS-RPT** (reports of failures). It reports a missing or unusable policy, a policy still in testing mode, MX hosts the policy does not cover (high when enforcing, because mail is then being refused), and a missing TLS-RPT record.

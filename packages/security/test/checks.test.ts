@@ -213,12 +213,15 @@ describe("email auth", () => {
     runChecks(domain, { deps: deps({ resolveMx: m, resolveTxt: txt(map) }) });
 
   test("domains that cannot receive mail are skipped", async () =>
-    expect(keys(await run({}, async () => [])).filter((k) => k.startsWith("email."))).toEqual([]));
+    expect(
+      keys(await run({}, async () => [])).filter(
+        (k) => k.startsWith("email.") && !/mta_sts|tls_rpt/.test(k),
+      ),
+    ).toEqual([]));
   test("no SPF, no DMARC", async () =>
-    expect(keys(await run({})).filter((k) => k.startsWith("email."))).toEqual([
-      "email.dmarc_missing",
-      "email.spf_missing",
-    ]));
+    expect(
+      keys(await run({})).filter((k) => k.startsWith("email.") && !/mta_sts|tls_rpt/.test(k)),
+    ).toEqual(["email.dmarc_missing", "email.spf_missing"]));
   test("strict SPF + enforced DMARC is clean", async () =>
     expect(
       keys(
@@ -226,7 +229,7 @@ describe("email auth", () => {
           "example.com": ["v=spf1 include:_spf.x.com -all"],
           "_dmarc.example.com": ["v=DMARC1; p=reject"],
         }),
-      ).filter((k) => k.startsWith("email.")),
+      ).filter((k) => k.startsWith("email.") && !/mta_sts|tls_rpt/.test(k)),
     ).toEqual([]));
   test("+all SPF is high severity", async () => {
     const r = await run({

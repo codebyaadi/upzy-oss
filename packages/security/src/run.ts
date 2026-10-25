@@ -5,10 +5,13 @@ import { cveCheck } from "./checks/cve";
 import { caaCheck, takeoverCheck } from "./checks/dns";
 import { emailCheck } from "./checks/email-auth";
 import { headersCheck } from "./checks/headers";
+import { mtaStsCheck } from "./checks/mta-sts";
+import { pageChangeCheck } from "./checks/page-change";
 import { registrationCheck, dnssecCheck } from "./checks/registration";
 import { reputationCheck } from "./checks/reputation";
 import { tlsCheck, tlsLegacyCheck } from "./checks/tls";
 import { defaultDeps } from "./deps";
+import { extractHosts, mergePageState, type PageState } from "./page-state";
 import { recordFetches, type Proof } from "./proof";
 import { detectStack, type Stack } from "./stack";
 import type { AssetRef, Check, CheckContext, Deps, FindingDraft } from "./types";
@@ -19,6 +22,8 @@ export const PASSIVE_CHECKS: Check[] = [
   tlsCheck,
   tlsLegacyCheck,
   emailCheck,
+  mtaStsCheck,
+  pageChangeCheck,
   caaCheck,
   takeoverCheck,
   cveCheck,
@@ -43,6 +48,8 @@ export interface ScanResult {
   stack?: Stack;
   /** Versioned software seen on the page, when it could be fetched. Absent means "unknown", not "none". */
   components?: Component[];
+  /** Third-party hosts on the page, merged with what was remembered. Absent when the page could not be read. */
+  page?: PageState;
   /** Findings that were new but not seen again by the second run, so were not reported. */
   unconfirmed?: string[];
 }
@@ -93,6 +100,8 @@ export interface RunOptions {
   isNew?: (f: FindingDraft) => boolean;
   /** Pause before the second run, so it is not answered by the same transient condition. */
   recheckDelayMs?: number;
+  /** What the page loaded from other sites at earlier scans, so what is new can be told. */
+  previousPage?: PageState | null;
 }
 
 /**
@@ -104,6 +113,16 @@ export async function runChecks(asset: AssetRef, opts: RunOptions = {}): Promise
   const ctx = contextFor(asset, opts.deps);
   const result: ScanResult = { findings: [], outcomes: {}, errors: {} };
   const checks = opts.checks ?? (opts.verified ? ALL_CHECKS : PASSIVE_CHECKS);
+
+  // The page's third-party scripts, frames and form targets, against what was seen before. The fetch is shared with
+  // the checks, so reading it here costs no request.
+  const html = await ctx.deps.fetch(ctx.url).catch(() => undefined);
+  if (html && html.status < 400 && /html/i.test(html.headers["content-type"] ?? "")) {
+    const current = extractHosts(html.body, html.finalUrl, ctx.host);
+    const state = mergePageState(opts.previousPage, current);
+    ctx.page = { state, current };
+    result.page = state;
+  }
 
   // Same page the headers check reads (the fetch is shared), so detecting the stack costs no extra request.
   const stack = ctx.deps
@@ -160,6 +179,7 @@ export async function runChecks(asset: AssetRef, opts: RunOptions = {}): Promise
     if (opts.recheckDelayMs ?? 1000)
       await new Promise((r) => setTimeout(r, opts.recheckDelayMs ?? 1000));
     const fresh = contextFor(asset, opts.deps);
+    fresh.page = ctx.page;
     await Promise.all(
       doubtful.map(async ([check, drafts]) => {
         let again: Set<string> | undefined;
