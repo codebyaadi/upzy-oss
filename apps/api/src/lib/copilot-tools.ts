@@ -1,5 +1,5 @@
 import { fence } from "@upzy/ai";
-import { schema, type Db } from "@upzy/db";
+import { rollupSummary, schema, type Db } from "@upzy/db";
 import { tool, type ToolSet } from "ai";
 import { and, desc, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -156,17 +156,8 @@ export function copilotTools(db: Db, orgId: string, userId: string, refs: Refs):
           .where(and(eq(monitors.id, seen.id), mine(monitors.workspaceId)));
         if (!m) return NONE("monitor");
         const since = new Date(Date.now() - a.days * 86_400_000);
-        const [c] = await db
-          .select({
-            checks: sql<number>`count(*)::int`,
-            up: sql<number>`count(*) filter (where ${monitorChecks.status} = 'up')::int`,
-            avgMs: sql<number | null>`round(avg(${monitorChecks.responseMs}))::int`,
-            p95Ms: sql<
-              number | null
-            >`round(percentile_cont(0.95) within group (order by ${monitorChecks.responseMs}))::int`,
-          })
-          .from(monitorChecks)
-          .where(and(eq(monitorChecks.monitorId, m.id), gte(monitorChecks.createdAt, since)));
+        const r = await rollupSummary(db, m.id, since);
+        const c = { checks: r.total, up: r.up, avgMs: r.avgMs, p95Ms: r.p95Ms };
         const inc = await db
           .select({ createdAt: incidents.createdAt, resolvedAt: incidents.resolvedAt })
           .from(incidents)

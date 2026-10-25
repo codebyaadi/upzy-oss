@@ -14,6 +14,7 @@
 import { eq, sql } from "drizzle-orm";
 
 import { createDb } from "./drizzle";
+import { rebuildRollups } from "./rollups";
 import { members, monitors, organizations, users, workspaces } from "./schema";
 
 const ORG_ID = "load-test-org";
@@ -117,8 +118,15 @@ async function main() {
     );
   }
 
+  console.log("Building the rollups...");
+  for (const id of ids) await rebuildRollups(db, id);
+  await db.execute(
+    sql`update monitors m set last_check_at = (select max(created_at) from monitor_checks c where c.monitor_id = m.id) where m.workspace_id = ${workspace!.id}`,
+  );
+
   console.log("Updating table statistics...");
   await db.execute(sql`analyze monitor_checks`);
+  await db.execute(sql`analyze monitor_check_rollups`);
   await db.execute(sql`analyze monitors`);
   const [{ n }] = (await db.execute(
     sql`select count(*) as n from monitor_checks where monitor_id = any (${sql.raw(`array[${ids.map((b) => `'${b}'::uuid`).join(",")}]`)})`,

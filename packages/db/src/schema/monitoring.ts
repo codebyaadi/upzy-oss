@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   index,
   integer,
@@ -100,6 +101,8 @@ export const monitors = pgTable(
       .default(sql`'{}'::text[]`),
     /** Consecutive successful checks slower than `latencyThresholdMs`; three in a row make the monitor "degraded". */
     consecutiveSlow: integer("consecutive_slow").notNull().default(0),
+    /** When the last check was stored. Written by the prober, so a list of monitors doesn't have to scan checks. */
+    lastCheckAt: timestamp("last_check_at", { withTimezone: true }),
     /** Named secrets (JSON object, encrypted at rest) the monitor may use as {{secret.NAME}}. Write-only. */
     secretsEncrypted: text("secrets_encrypted"),
     /** Heartbeat monitors: the secret in the ping address, and when the job last checked in or reported failure. */
@@ -116,6 +119,39 @@ export const monitors = pgTable(
       .where(sql`${t.heartbeatToken} is not null`),
     index("monitors_active_bucket_next_run_idx").on(t.active, t.bucket, t.nextRun),
     index("monitors_workspace_id_idx").on(t.workspaceId),
+  ],
+);
+
+/**
+ * Checks counted into five-minute buckets per monitor and region, written in the same transaction as each check. What
+ * dashboards, charts, digests and reports read, so they never scan raw checks. `latency_hist` counts responses in the
+ * buckets of LATENCY_EDGES (packages/db/src/rollups.ts). `region` is '' for checks stored before regions existed.
+ */
+export const monitorCheckRollups = pgTable(
+  "monitor_check_rollups",
+  {
+    monitorId: uuid("monitor_id")
+      .notNull()
+      .references(() => monitors.id, { onDelete: "cascade" }),
+    region: text("region").notNull().default(""),
+    bucketStart: timestamp("bucket_start", { withTimezone: true }).notNull(),
+    total: integer("total").notNull(),
+    up: integer("up").notNull(),
+    degraded: integer("degraded").notNull().default(0),
+    /** Sum of response times, and how many checks had one, so an average can be rebuilt over any range. */
+    sumMs: bigint("sum_ms", { mode: "number" }).notNull().default(0),
+    msCount: integer("ms_count").notNull().default(0),
+    minMs: integer("min_ms"),
+    maxMs: integer("max_ms"),
+    latencyHist: integer("latency_hist")
+      .array()
+      .notNull()
+      .default(sql`'{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}'::integer[]`),
+  },
+  (t) => [
+    primaryKey({ columns: [t.monitorId, t.region, t.bucketStart] }),
+    // Retention deletes by age without scanning every monitor's buckets.
+    index("monitor_check_rollups_bucket_start_idx").on(t.bucketStart),
   ],
 );
 

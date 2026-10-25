@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import { createDbStores, createGateway } from "@upzy/ai";
-import { createDb, schema } from "@upzy/db";
+import { createDb, rebuildRollups, schema } from "@upzy/db";
 import { APICallError, type LanguageModel } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { and, eq, sql } from "drizzle-orm";
@@ -294,6 +294,7 @@ run("AI agent (postgres)", () => {
         { monitorId, status: "down", responseMs: null, createdAt: at("2026-09-30T10:00:00") }, // before the window
         { monitorId, status: "down", responseMs: null, createdAt: at("2026-10-12T10:00:00") }, // after the window
       ]);
+      await rebuildRollups(db, monitorId);
       await db.insert(incidents).values({
         workspaceId: ws,
         monitorId,

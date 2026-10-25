@@ -1,7 +1,7 @@
 import { schema, type Db } from "@upzy/db";
 import { and, eq, inArray, lt } from "drizzle-orm";
 
-const { monitorChecks, jobs } = schema;
+const { monitorChecks, monitorCheckRollups, jobs } = schema;
 
 const DAY = 86_400_000;
 
@@ -107,6 +107,8 @@ export async function purgeOldRows(
       batch,
       pauseMs,
     );
+    // The rollups age out with the checks they summarise (they are far smaller, so one statement per run is enough).
+    await db.delete(monitorCheckRollups).where(lt(monitorCheckRollups.bucketStart, cutoff));
   }
 
   const purgeJobs = (state: "done" | "failed", days: number) => {

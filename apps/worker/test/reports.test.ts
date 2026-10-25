@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import { reportUnsubscribeToken } from "@upzy/auth/unsubscribe";
-import { createDb, schema } from "@upzy/db";
+import { createDb, rebuildRollups, schema } from "@upzy/db";
 import { eq, inArray, sql } from "drizzle-orm";
 
 import {
@@ -165,7 +165,10 @@ run("client reports (postgres)", () => {
         createdAt: at(inMonth),
       })),
     ];
-    if (rows.length) await db.insert(monitorChecks).values(rows);
+    if (rows.length) {
+      await db.insert(monitorChecks).values(rows);
+      await rebuildRollups(db, m);
+    }
     return m;
   }
 

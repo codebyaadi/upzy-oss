@@ -2,6 +2,7 @@ import { decryptJson } from "@upzy/crypto";
 import {
   activeMaintenance,
   checkQueue,
+  recordRollup,
   regionalVerdict,
   regionsOf,
   schema,
@@ -57,7 +58,7 @@ export async function handleCheck(
   await db.transaction(async (tx) => {
     // A heartbeat is evaluated every minute, but only a change of state is worth a row of history.
     const unchanged = m.type === "heartbeat" && result.status === m.lastStatus;
-    if (!unchanged)
+    if (!unchanged) {
       await tx.insert(monitorChecks).values({
         monitorId: m.id,
         status: result.status,
@@ -69,6 +70,14 @@ export async function handleCheck(
         ttfbMs: result.ttfbMs,
         tlsDaysLeft: result.tlsDaysLeft,
       });
+      // Counted into its five-minute bucket in the same transaction, so charts and reports never need the raw rows.
+      await recordRollup(tx, {
+        monitorId: m.id,
+        region,
+        status: result.status,
+        responseMs: result.responseMs,
+      });
+    }
 
     // Lock the monitor row so concurrent checks cannot both open an incident.
     const [fresh] = await tx.select().from(monitors).where(eq(monitors.id, m.id)).for("update");
@@ -142,6 +151,7 @@ export async function handleCheck(
         consecutiveFailures: next.consecutiveFailures,
         consecutiveSlow: next.consecutiveSlow,
         lastStatus: next.monitorStatus,
+        ...(unchanged ? {} : { lastCheckAt: sql`now()` }),
       })
       .where(eq(monitors.id, m.id));
 

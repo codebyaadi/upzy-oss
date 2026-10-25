@@ -8,6 +8,9 @@ import {
   activeMaintenance,
   browserEndpoint,
   offeredRegions,
+  rollupSeries,
+  rollupSummary,
+  rollupTotals,
   schema,
   type Db,
 } from "@upzy/db";
@@ -17,7 +20,7 @@ import {
   referencesProblem,
   type Step,
 } from "@upzy/validator";
-import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { z } from "zod";
 
@@ -144,27 +147,12 @@ export const monitorModule = (
             .orderBy(desc(monitors.createdAt));
           if (rows.length === 0) return [];
 
-          const since = new Date(Date.now() - 24 * 3600_000);
-          const agg = await db
-            .select({
-              monitorId: monitorChecks.monitorId,
-              total: sql<number>`count(*)::int`,
-              up: sql<number>`count(*) filter (where ${monitorChecks.status} = 'up')::int`,
-              avgMs: sql<number | null>`round(avg(${monitorChecks.responseMs}))::int`,
-              lastCheckAt: sql<Date | null>`max(${monitorChecks.createdAt})`,
-            })
-            .from(monitorChecks)
-            .where(
-              and(
-                inArray(
-                  monitorChecks.monitorId,
-                  rows.map((r) => r.id),
-                ),
-                gte(monitorChecks.createdAt, since),
-              ),
-            )
-            .groupBy(monitorChecks.monitorId);
-          const byId = new Map(agg.map((a) => [a.monitorId, a]));
+          // From the five-minute rollups, not the raw checks: 300 monitors is 86k buckets a day instead of 432k rows.
+          const byId = await rollupTotals(
+            db,
+            rows.map((r) => r.id),
+            new Date(Date.now() - 24 * 3600_000),
+          );
           const inMaintenance = await activeMaintenance(
             db,
             rows.map((r) => r.id),
@@ -179,7 +167,7 @@ export const monitorModule = (
               // A heartbeat only records changes of state, so a percentage of rows would mislead.
               uptime24h: m.type !== "heartbeat" && a && a.total > 0 ? a.up / a.total : null,
               avgMs24h: a?.avgMs ?? null,
-              lastCheckAt: a?.lastCheckAt ?? null,
+              lastCheckAt: m.lastCheckAt,
             };
           });
         },
@@ -381,39 +369,16 @@ export const monitorModule = (
           const { hours, bin } = RANGES[query.range];
           const since = new Date(Date.now() - hours * 3600_000);
 
-          const [summary] = [
-            ...(await db.execute<{
-              total: number;
-              up: number;
-              avg_ms: number | null;
-              p95_ms: number | null;
-            }>(sql`
-            select count(*)::int as total,
-                   count(*) filter (where status = 'up')::int as up,
-                   round(avg(response_ms))::int as avg_ms,
-                   round(percentile_cont(0.95) within group (order by response_ms))::int as p95_ms
-            from monitor_checks where monitor_id = ${params.id} and created_at >= ${since}`)),
-          ];
-          const series = await db.execute<{
-            t: Date;
-            avg_ms: number | null;
-            up: number;
-            total: number;
-          }>(sql`
-          select date_bin(${bin}::interval, created_at, timestamptz '2000-01-01 00:00:00+00') as t,
-                 round(avg(response_ms))::int as avg_ms,
-                 count(*) filter (where status = 'up')::int as up,
-                 count(*)::int as total
-          from monitor_checks where monitor_id = ${params.id} and created_at >= ${since}
-          group by 1 order by 1`);
+          const summary = await rollupSummary(db, params.id, since);
+          const series = await rollupSeries(db, params.id, since, bin);
 
           return {
             range: query.range,
-            checks: summary?.total ?? 0,
-            uptime: summary && summary.total > 0 ? summary.up / summary.total : null,
-            avgMs: summary?.avg_ms ?? null,
-            p95Ms: summary?.p95_ms ?? null,
-            series: [...series].map((r) => ({ t: r.t, avgMs: r.avg_ms, up: r.up, total: r.total })),
+            checks: summary.total,
+            uptime: summary.total > 0 ? summary.up / summary.total : null,
+            avgMs: summary.avgMs,
+            p95Ms: summary.p95Ms,
+            series,
           };
         },
         { org: true, params: Params, query: StatsQuery },

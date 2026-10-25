@@ -1,8 +1,8 @@
 import type { DigestStats } from "@upzy/ai";
-import { schema, type Db } from "@upzy/db";
-import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { rollupTotals, schema, type Db } from "@upzy/db";
+import { and, desc, eq, sql } from "drizzle-orm";
 
-const { monitors, monitorChecks, incidents, findings, assets, workspaces } = schema;
+const { monitors, incidents, findings, assets, workspaces } = schema;
 
 /** Monday 00:00 UTC of the week containing `d`, as YYYY-MM-DD. */
 export function weekStartOf(d: Date): string {
@@ -37,24 +37,9 @@ export async function computePeriodStats(
     .from(monitors)
     .where(eq(monitors.workspaceId, workspaceId));
   const ids = monitorRows.map((m) => m.id);
-  const agg = ids.length
-    ? await db
-        .select({
-          monitorId: monitorChecks.monitorId,
-          total: sql<number>`count(*)::int`,
-          up: sql<number>`count(*) filter (where ${monitorChecks.status} = 'up')::int`,
-          avgMs: sql<number | null>`round(avg(${monitorChecks.responseMs}))::int`,
-        })
-        .from(monitorChecks)
-        .where(
-          and(
-            inArray(monitorChecks.monitorId, ids),
-            gte(monitorChecks.createdAt, from),
-            lt(monitorChecks.createdAt, to),
-          ),
-        )
-        .groupBy(monitorChecks.monitorId)
-    : [];
+  // From the five-minute rollups. A window that doesn't start on a five-minute mark is rounded to whole buckets.
+  const rolled = await rollupTotals(db, ids, from, to);
+  const agg = [...rolled].map(([monitorId, t]) => ({ monitorId, ...t }));
 
   const inc = await db
     .select({

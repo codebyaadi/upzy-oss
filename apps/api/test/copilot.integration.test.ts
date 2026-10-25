@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createDbStores, createGateway } from "@upzy/ai";
 import { createAuth } from "@upzy/auth/server";
 import { encrypt } from "@upzy/crypto";
-import { createDb, schema } from "@upzy/db";
+import { createDb, rebuildRollups, schema } from "@upzy/db";
 import type { LanguageModel } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { eq, like } from "drizzle-orm";
@@ -185,15 +185,19 @@ run("ops copilot (postgres)", () => {
       monitorId: string,
       rows: { s: "up" | "down"; ms: number | null; min: number; tls?: number }[],
     ) =>
-      db.insert(schema.monitorChecks).values(
-        rows.map((r) => ({
-          monitorId,
-          status: r.s,
-          responseMs: r.ms,
-          tlsDaysLeft: r.tls ?? null,
-          createdAt: new Date(now - r.min * 60_000),
-        })),
-      );
+      db
+        .insert(schema.monitorChecks)
+        .values(
+          rows.map((r) => ({
+            monitorId,
+            status: r.s,
+            responseMs: r.ms,
+            tlsDaysLeft: r.tls ?? null,
+            createdAt: new Date(now - r.min * 60_000),
+          })),
+        )
+        // Statistics read the rollups, which the prober keeps; rebuild them for rows inserted directly.
+        .then(() => rebuildRollups(db, monitorId));
     await checks(ids.apiA, [
       { s: "up", ms: 100, min: 50, tls: 40 },
       { s: "up", ms: 300, min: 40, tls: 12 },

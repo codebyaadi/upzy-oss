@@ -7,4 +7,5 @@ export * from "./access";
 export * from "./org-security";
 export * from "./similar-incidents";
 export * from "./regions";
+export * from "./rollups";
 export * from "./browser";
