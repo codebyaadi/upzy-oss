@@ -226,17 +226,15 @@ run("history by plan (postgres)", () => {
         active: true,
       })
       .returning({ id: monitors.id });
-    await db
-      .insert(monitorCheckRollups)
-      .values(
-        AGES.map((d) => ({
-          monitorId: m!.id,
-          region: "",
-          bucketStart: daysAgo(d),
-          total: 1,
-          up: 1,
-        })),
-      );
+    await db.insert(monitorCheckRollups).values(
+      AGES.map((d) => ({
+        monitorId: m!.id,
+        region: "",
+        bucketStart: daysAgo(d),
+        total: 1,
+        up: 1,
+      })),
+    );
     monitorOf.set(id, m!.id);
     return id;
   }
@@ -312,17 +310,15 @@ run("history by plan (postgres)", () => {
     const monitorId = monitorOf.get(free)!;
     await db.delete(monitorCheckRollups).where(eq(monitorCheckRollups.monitorId, monitorId));
     const realAgo = (d: number) => new Date(Date.now() - d * 86_400_000);
-    await db
-      .insert(monitorCheckRollups)
-      .values(
-        [3, 30, 200].map((d) => ({
-          monitorId,
-          region: "",
-          bucketStart: realAgo(d),
-          total: 1,
-          up: 1,
-        })),
-      );
+    await db.insert(monitorCheckRollups).values(
+      [3, 30, 200].map((d) => ({
+        monitorId,
+        region: "",
+        bucketStart: realAgo(d),
+        total: 1,
+        up: 1,
+      })),
+    );
     const days = async () =>
       (
         await db
