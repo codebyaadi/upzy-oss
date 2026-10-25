@@ -3,6 +3,7 @@ import { browserEndpoint, createDb } from "@upzy/db";
 import { logQueueMetrics } from "@upzy/queue";
 import { z } from "zod";
 
+import { runAdvisories } from "./roles/advisories";
 import { runAgent } from "./roles/agent";
 import { runBrowserProber } from "./roles/browser";
 import { runCorrelator } from "./roles/correlator";
@@ -12,7 +13,6 @@ import { runNotifier } from "./roles/notifier";
 import { runProber } from "./roles/prober";
 import { parseReports, runReports } from "./roles/reports";
 import { parseRetention, runRetention } from "./roles/retention";
-import { runAdvisories } from "./roles/advisories";
 import { runScanner } from "./roles/scanner";
 import { runScheduler } from "./roles/scheduler";
 
