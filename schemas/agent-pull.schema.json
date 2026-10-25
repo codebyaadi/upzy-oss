@@ -1,0 +1,14 @@
+{
+  "$id": "agent-pull.schema.json",
+  "title": "AgentPull",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "max": {
+      "default": 10,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50
+    }
+  }
+}

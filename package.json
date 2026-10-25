@@ -34,6 +34,8 @@
     "lint": "turbo run lint",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
+    "schemas": "bun run --filter @upzy/validator schemas",
+    "schemas:check": "bun run --filter @upzy/validator schemas:check",
     "check-types": "turbo run check-types",
     "db:generate": "bun run --filter @upzy/db drizzle:generate",
     "db:migrate": "bun run --filter @upzy/db drizzle:migrate",

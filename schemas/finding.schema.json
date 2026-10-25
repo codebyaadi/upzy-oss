@@ -1,0 +1,66 @@
+{
+  "$id": "finding.schema.json",
+  "title": "FindingDraft",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "checkKey": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "info"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 5000
+    },
+    "remediation": {
+      "type": "string",
+      "maxLength": 5000
+    },
+    "subject": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "evidence": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "risk": {
+      "type": "object",
+      "properties": {
+        "kev": {
+          "type": "boolean"
+        },
+        "epss": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    }
+  },
+  "required": [
+    "checkKey",
+    "severity",
+    "title",
+    "description",
+    "remediation"
+  ]
+}

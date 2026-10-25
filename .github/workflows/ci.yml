@@ -38,6 +38,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run format:check
       - run: bun run lint
+      - run: bun run schemas:check
       - run: bun run check-types
       - name: Apply migrations
         run: bun run db:migrate

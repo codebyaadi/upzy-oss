@@ -7,6 +7,8 @@
   },
   "scripts": {
     "check-types": "tsc --noEmit",
+    "schemas": "bun scripts/schemas.ts",
+    "schemas:check": "bun scripts/schemas.ts --check",
     "lint": "oxlint",
     "test": "bun test"
   },

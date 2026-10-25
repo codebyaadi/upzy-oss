@@ -1,0 +1,30 @@
+{
+  "$id": "agent-hello.schema.json",
+  "title": "AgentHello",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "os": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "arch": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "protocol": {
+      "default": 1,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "version"
+  ]
+}

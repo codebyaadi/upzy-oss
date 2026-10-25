@@ -239,6 +239,7 @@
         "@types/bun": "catalog:dev",
         "@types/node": "catalog:dev",
         "@upzy/typescript-config": "workspace:*",
+        "@upzy/validator": "workspace:*",
         "oxlint": "catalog:dev",
         "typescript": "catalog:dev",
       },

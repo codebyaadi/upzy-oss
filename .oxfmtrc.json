@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["node_modules", ".next", "dist"],
+  "ignorePatterns": ["node_modules", ".next", "dist", "schemas"],
   "experimentalSortImports": {
     "ignoreCase": true,
     "newlinesBetween": true

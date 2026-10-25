@@ -1,0 +1,63 @@
+{
+  "$id": "agent-result.schema.json",
+  "title": "AgentResult",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "up",
+        "down"
+      ]
+    },
+    "responseMs": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 600000
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "statusCode": {
+      "type": "integer",
+      "minimum": 100,
+      "maximum": 599
+    },
+    "ttfbMs": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 600000
+    },
+    "tlsDaysLeft": {
+      "type": "integer",
+      "minimum": -3650,
+      "maximum": 36500
+    },
+    "error": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "errorKind": {
+      "type": "string",
+      "enum": [
+        "dns",
+        "timeout",
+        "tls",
+        "http",
+        "refused",
+        "blocked",
+        "assertion",
+        "other"
+      ]
+    }
+  },
+  "required": [
+    "status",
+    "responseMs"
+  ]
+}
