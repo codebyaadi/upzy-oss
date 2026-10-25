@@ -11,7 +11,7 @@
     "start": "bun --env-file=../../.env src/index.ts",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
-    "test": "DB_POOL_MAX=3 bun test",
+    "test": "DB_POOL_MAX=3 DB_IDLE_TIMEOUT=2 bun test",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
