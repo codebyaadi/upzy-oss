@@ -210,8 +210,9 @@ export async function rollupSeries(
 }
 
 /**
- * Rebuilds a monitor's rollups from its stored checks (all of them, or those since `from`). It is the repair tool if
- * rollups ever drift from the checks, and how tests that insert checks directly get their rollups. It replaces whole
+ * Rebuilds a monitor's rollups from its stored checks (all of them, or those since `from`), and refreshes the monitor's
+ * last-check columns from them. It is the repair tool if the summaries ever drift from the checks, and how tests that
+ * insert checks directly get their rollups. It replaces whole
  * buckets, so don't run it for a window that is still receiving checks.
  */
 export async function rebuildRollups(db: Exec, monitorId: string, from?: Date): Promise<void> {
@@ -245,4 +246,15 @@ export async function rebuildRollups(db: Exec, monitorId: string, from?: Date): 
     from monitor_checks
     where monitor_id = ${monitorId} ${since}
     group by 1, 2, 3`);
+  await db.execute(sql`
+    update monitors m set
+      last_check_at = l.created_at,
+      last_response_ms = l.response_ms,
+      last_tls_days_left = (select tls_days_left from monitor_checks c
+                            where c.monitor_id = m.id and c.tls_days_left is not null
+                              and c.created_at > now() - interval '14 days'
+                            order by c.created_at desc limit 1)
+    from (select created_at, response_ms from monitor_checks
+          where monitor_id = ${monitorId} order by created_at desc limit 1) l
+    where m.id = ${monitorId}`);
 }

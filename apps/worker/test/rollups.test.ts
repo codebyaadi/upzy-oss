@@ -185,6 +185,35 @@ run("check rollups (postgres)", () => {
     expect(after).toEqual(before);
   });
 
+  test("the monitor keeps its last response time, and the last certificate days-left any check saw", async () => {
+    const m = await make({ regions: [] });
+    const withCert: Probe = async () => ({ status: "up", responseMs: 120, tlsDaysLeft: 41 });
+    const withoutCert: Probe = async () => ({ status: "up", responseMs: 80 });
+    await handleCheck(db, { monitorId: m.id }, { probe: withCert });
+    await handleCheck(db, { monitorId: m.id }, { probe: withoutCert });
+    const [row] = await db.select().from(monitors).where(eq(monitors.id, m.id));
+    expect(row!.lastResponseMs).toBe(80);
+    expect(row!.lastTlsDaysLeft).toBe(41);
+    expect(row!.lastCheckAt).not.toBeNull();
+  });
+
+  test("a check that changes nothing about the monitor's state leaves its state columns alone", async () => {
+    const m = await make({ regions: [], consecutiveFailures: 0, lastStatus: "up" });
+    await handleCheck(db, { monitorId: m.id }, { probe: answering(50) });
+    const [row] = await db.select().from(monitors).where(eq(monitors.id, m.id));
+    expect(row!.consecutiveFailures).toBe(0);
+    expect(row!.lastStatus).toBe("up");
+    // A failure still changes the streak, and a recovery clears it.
+    await handleCheck(db, { monitorId: m.id }, { probe: answering(null) });
+    expect(
+      (await db.select().from(monitors).where(eq(monitors.id, m.id)))[0]!.consecutiveFailures,
+    ).toBe(1);
+    await handleCheck(db, { monitorId: m.id }, { probe: answering(50) });
+    expect(
+      (await db.select().from(monitors).where(eq(monitors.id, m.id)))[0]!.consecutiveFailures,
+    ).toBe(0);
+  });
+
   test("a monitor with no checks has empty stats", async () => {
     const m = await make();
     expect((await rollupSummary(db, m.id, new Date(0))).total).toBe(0);

@@ -1,7 +1,7 @@
 import { fence } from "@upzy/ai";
 import { rollupSummary, schema, type Db } from "@upzy/db";
 import { tool, type ToolSet } from "ai";
-import { and, desc, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, lte, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { orgWorkspaceIds } from "./scope";
@@ -462,35 +462,32 @@ export function copilotTools(db: Db, orgId: string, userId: string, refs: Refs):
         "Monitors whose TLS certificate (as seen by the latest check) expires within N days (1 to 90, default 30), soonest first.",
       inputSchema: z.object({ withinDays: z.number().int().min(1).max(90).default(30) }),
       execute: safely("expiringCertificates", async (a: { withinDays: number }) => {
+        // The prober keeps the latest certificate days-left on the monitor, so this never reads the checks.
         const rows = await db
           .select({
             id: monitors.id,
             name: monitors.name,
             target: monitors.target,
-            daysLeft: sql<number>`(array_agg(${monitorChecks.tlsDaysLeft} order by ${monitorChecks.createdAt} desc))[1]`,
+            daysLeft: sql<number>`${monitors.lastTlsDaysLeft}`,
           })
           .from(monitors)
-          .innerJoin(monitorChecks, eq(monitorChecks.monitorId, monitors.id))
           .where(
             and(
               mine(monitors.workspaceId),
-              isNotNull(monitorChecks.tlsDaysLeft),
+              isNotNull(monitors.lastTlsDaysLeft),
+              lte(monitors.lastTlsDaysLeft, a.withinDays),
               eq(monitors.active, true),
               ne(monitors.type, "dns"),
             ),
           )
-          .groupBy(monitors.id)
-          .limit(200);
-        return rows
-          .filter((r) => r.daysLeft <= a.withinDays)
-          .sort((x, y) => x.daysLeft - y.daysLeft)
-          .slice(0, 25)
-          .map((r) => ({
-            id: R("monitor", r.id, r.name),
-            name: r.name,
-            target: r.target,
-            daysLeft: r.daysLeft,
-          }));
+          .orderBy(monitors.lastTlsDaysLeft)
+          .limit(25);
+        return rows.map((r) => ({
+          id: R("monitor", r.id, r.name),
+          name: r.name,
+          target: r.target,
+          daysLeft: r.daysLeft,
+        }));
       }),
     }),
   };

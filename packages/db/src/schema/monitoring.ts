@@ -103,6 +103,9 @@ export const monitors = pgTable(
     consecutiveSlow: integer("consecutive_slow").notNull().default(0),
     /** When the last check was stored. Written by the prober, so a list of monitors doesn't have to scan checks. */
     lastCheckAt: timestamp("last_check_at", { withTimezone: true }),
+    /** The latest check's response time, and the latest certificate days-left any check saw. Also from the prober. */
+    lastResponseMs: integer("last_response_ms"),
+    lastTlsDaysLeft: integer("last_tls_days_left"),
     /** Named secrets (JSON object, encrypted at rest) the monitor may use as {{secret.NAME}}. Write-only. */
     secretsEncrypted: text("secrets_encrypted"),
     /** Heartbeat monitors: the secret in the ping address, and when the job last checked in or reported failure. */

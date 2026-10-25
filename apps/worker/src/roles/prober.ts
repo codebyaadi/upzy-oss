@@ -12,6 +12,7 @@ import {
 import { runProbe } from "@upzy/probes";
 import { enqueue, work } from "@upzy/queue";
 import { and, eq, ne, sql } from "drizzle-orm";
+import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 
 import { evaluate } from "../evaluate";
 import { createGate, openGate, type Gate } from "../gate";
@@ -154,15 +155,22 @@ export async function handleCheck(
         inMaintenance: !!window,
       });
 
-      await tx
-        .update(monitors)
-        .set({
-          consecutiveFailures: next.consecutiveFailures,
-          consecutiveSlow: next.consecutiveSlow,
-          lastStatus: next.monitorStatus,
-          ...(unchanged ? {} : { lastCheckAt: sql`now()` }),
-        })
-        .where(eq(monitors.id, m.id));
+      // Write only what changed. Most checks change nothing about the monitor's state, and then the row gets just
+      // the last-check columns that dashboards read in place of scanning checks.
+      const changes: PgUpdateSetSource<typeof monitors> = {};
+      if (next.consecutiveFailures !== fresh.consecutiveFailures)
+        changes.consecutiveFailures = next.consecutiveFailures;
+      if (next.consecutiveSlow !== fresh.consecutiveSlow)
+        changes.consecutiveSlow = next.consecutiveSlow;
+      if (next.monitorStatus !== fresh.lastStatus) changes.lastStatus = next.monitorStatus;
+      if (!unchanged) {
+        changes.lastCheckAt = sql`now()`;
+        changes.lastResponseMs = result.responseMs;
+        // The certificate's days left only change when a check sees one; keep the last known value otherwise.
+        if (result.tlsDaysLeft != null) changes.lastTlsDaysLeft = result.tlsDaysLeft;
+      }
+      if (Object.keys(changes).length > 0)
+        await tx.update(monitors).set(changes).where(eq(monitors.id, m.id));
 
       if (next.suppressedByMaintenance)
         console.log(`[incident] held for ${m.name}: maintenance "${window!.name}" is in progress`);
