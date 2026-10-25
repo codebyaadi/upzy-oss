@@ -274,6 +274,13 @@
       "when": 1792911932047,
       "tag": "0038_last_check_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792912233895,
+      "tag": "0039_job_notify",
+      "breakpoints": true
     }
   ]
 }

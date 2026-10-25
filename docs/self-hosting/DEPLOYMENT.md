@@ -73,7 +73,7 @@ Things to confirm with whichever provider you pick:
 **Upgrade path without rewrites** (each is a config change):
 
 1. **Managed Postgres:** point `DATABASE_URL` at it and remove the `postgres`/`backup` services.
-2. **Separate worker machine:** run only `worker` with `WORKER_ROLES=...` on another host that can reach Postgres over TLS.
+2. **Separate worker machine:** run only `worker` with `WORKER_ROLES=...` on another host that can reach Postgres over TLS. Workers start jobs the moment they are queued using Postgres `LISTEN`, which needs a direct connection (not a transaction-mode pooler such as PgBouncer); where it isn't available they log a warning once and poll every second instead.
 3. **More probe regions:** a tiny VPS in another region running `WORKER_ROLES=prober` with its own `WORKER_REGION`, and `PROBE_REGIONS` set on the main server. This needs the database reachable from it (TLS and an IP allow-list). See [MULTI-REGION.md](../guides/MULTI-REGION.md).
 4. **Web on Vercel:** build with `NEXT_PUBLIC_API_URL` set and keep the API on the server. Keep web and API on sibling subdomains so the cookie still works.
 

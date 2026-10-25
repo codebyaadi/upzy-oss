@@ -3,8 +3,10 @@ import { sql } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 
 import { jobMetrics } from "./metrics";
+import { acquireWaker } from "./wake";
 
 export * from "./metrics";
+export * from "./wake";
 
 const { jobs } = schema;
 
@@ -140,7 +142,22 @@ export async function requeueStale(db: Executor, staleAfterMs = 5 * 60_000) {
   );
 }
 
+/** How long a queue waits before looking again when nothing woke it: the safety net behind LISTEN. */
+const WAKE_FALLBACK_MS = 5000;
+/** The poll interval when LISTEN is not available. */
+const POLL_MS = 1000;
+
+let lastSweep = 0;
+/** Returns jobs of dead workers to the queue, at most once a minute for the whole process, however many loops run. */
+async function sweepStale(db: Db) {
+  if (Date.now() - lastSweep < 60_000) return;
+  lastSweep = Date.now();
+  await requeueStale(db).catch((e) => console.error("requeueStale", e));
+}
+
 export interface WorkOptions {
+  /** Start on a notification when a job is queued instead of polling. On by default; falls back to polling. */
+  wake?: boolean;
   /** Delete a job when it succeeds instead of keeping it as `done`. Failed jobs are always kept. */
   discardWhenDone?: boolean;
   concurrency?: number;
@@ -148,22 +165,24 @@ export interface WorkOptions {
   signal?: AbortSignal;
 }
 
-/** Polls `queue` and runs `handler` for each job until `signal` aborts. Resolves once in-flight jobs drain. */
+/**
+ * Runs `handler` for each job on `queue` until `signal` aborts, and resolves once in-flight jobs drain. A job starts
+ * within milliseconds of being queued (Postgres LISTEN/NOTIFY); `pollMs` is the safety net for lost notifications and
+ * for jobs queued to run later, and is the whole mechanism where LISTEN is not available.
+ */
 export async function work<T>(
   db: Db,
   queue: string,
   handler: (payload: T, job: Job<T>) => Promise<void>,
   opts: WorkOptions = {},
 ) {
-  const { concurrency = 5, pollMs = 1000, signal, discardWhenDone = false } = opts;
+  const { concurrency = 5, signal, discardWhenDone = false } = opts;
   const inFlight = new Set<Promise<void>>();
-  let lastSweep = 0;
+  const woken = opts.wake === false ? null : await acquireWaker(db);
+  const pollMs = opts.pollMs ?? (woken ? WAKE_FALLBACK_MS : POLL_MS);
 
   while (!signal?.aborted) {
-    if (Date.now() - lastSweep > 60_000) {
-      lastSweep = Date.now();
-      await requeueStale(db).catch((e) => console.error("requeueStale", e));
-    }
+    await sweepStale(db);
 
     const free = concurrency - inFlight.size;
     let claimed: Job[] = [];
@@ -196,8 +215,12 @@ export async function work<T>(
 
     // Poll again immediately if the batch was full, otherwise wait.
     if (claimed.length < free || free === 0) {
-      await Promise.race([Bun.sleep(pollMs), ...inFlight]);
+      await Promise.race([
+        woken ? woken.waker.wait(queue, pollMs, signal) : Bun.sleep(pollMs),
+        ...inFlight,
+      ]);
     }
   }
   await Promise.all(inFlight);
+  await woken?.release();
 }
