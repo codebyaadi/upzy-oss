@@ -35,10 +35,10 @@ const unauthorized = () =>
  */
 export const agentModule = (db: Db, opts: { encryptionKey: string }) =>
   new Elysia({ prefix: "/agent" })
-    .derive({ as: "scoped" }, async ({ request }) => ({
+    .derive(async ({ request }) => ({
       agent: await authenticateAgent(db, request.headers.get("authorization")),
     }))
-    .onBeforeHandle({ as: "scoped" }, ({ agent }) => {
+    .onBeforeHandle(({ agent }) => {
       if (!agent) return unauthorized();
     })
     // Says who it is and what it runs, and learns how to talk to this server.

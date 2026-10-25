@@ -14,6 +14,7 @@ import {
 import { and, eq, inArray, lte, ne, notInArray, sql } from "drizzle-orm";
 
 import { dbCache, pruneCache } from "../db-cache";
+import { activeEngine, checksFor, queueActiveScan } from "./active-scan";
 import { NOTIFY_QUEUE, type FindingNotifyJob } from "./notifier";
 
 export const SCAN_QUEUE = "scan";
@@ -235,10 +236,13 @@ export async function handleScan(
       {
         deps,
         verified: asset.verified,
+        checks: checksFor(asset.verified, activeEngine()),
         isNew: await newFindingFilter(db, assetId),
         previousPage: asset.pageState,
       },
     );
+    // With the nuclei engine, the exposed-file scan runs in upzy-scan: queue it, for verified assets only.
+    if (activeEngine() === "nuclei") await queueActiveScan(db, asset);
     await applyScanResult(db, scan!, result);
     await db.update(assets).set({ lastScanAt: new Date() }).where(eq(assets.id, assetId));
     // The trend is a nicety: never fail a scan over it.

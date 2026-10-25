@@ -101,3 +101,38 @@ jobs:
           for t in linux/amd64 linux/arm64 windows/amd64; do
             GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build -trimpath -o /dev/null .
           done
+
+  # The active scanner (scan/) embeds nuclei. Besides the usual checks, its dependencies are checked against the public
+  # checksum database, and the templates generated from the built-in exposed-path list must be up to date.
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Generated templates are current
+        run: bun scan/scripts/gen-templates.ts --check
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: scan/go.mod
+      - name: Formatted
+        working-directory: scan
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+      - name: Licences are recorded
+        run: bun scan/scripts/licenses.ts --check
+      - name: go.sum matches the checksum database
+        working-directory: scan
+        run: |
+          go mod download
+          git diff --exit-code -- go.sum go.mod
+      - working-directory: scan
+        run: go vet ./...
+      - working-directory: scan
+        run: go test ./...
+      - name: Cross-compiles
+        working-directory: scan
+        run: |
+          for t in linux/amd64 linux/arm64 windows/amd64; do
+            GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build -trimpath -o /dev/null .
+          done

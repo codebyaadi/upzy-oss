@@ -55,3 +55,7 @@ export function regionalVerdict(
 
 /** Results that probe agents have reported, waiting for the main server's worker to record them. */
 export const RESULT_QUEUE = "check.result";
+
+/** Verified assets waiting for the active scanner, and the scanner's results waiting for the worker to record. */
+export const ACTIVE_SCAN_QUEUE = "scan.active";
+export const SCAN_RESULT_QUEUE = "scan.result";

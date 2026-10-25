@@ -158,6 +158,38 @@ export const findings = pgTable(
   ],
 );
 
+/**
+ * What an active scan actually did, kept so a customer (or we) can see exactly what was sent to a site, when, by which
+ * engine and which templates. One row per scan result accepted from the scanner.
+ */
+export const scanProvenance = pgTable(
+  "scan_provenance",
+  {
+    id: id(),
+    workspaceId: workspaceId(),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => assets.id, { onDelete: "cascade" }),
+    scanId: uuid("scan_id").references(() => scans.id, { onDelete: "set null" }),
+    /** The scanner (a probe_agents row of kind "scanner") that ran it. */
+    scannerId: uuid("scanner_id"),
+    engine: text("engine").notNull(),
+    engineVersion: text("engine_version"),
+    templateSet: text("template_set"),
+    templatesRun: integer("templates_run").notNull().default(0),
+    requests: integer("requests").notNull().default(0),
+    rateLimitPerSecond: integer("rate_limit_per_second").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }).notNull(),
+    findings: integer("findings").notNull().default(0),
+    error: text("error"),
+    /** Ids of the templates that ran. */
+    templates: jsonb<string[]>("templates").notNull().default([]),
+    createdAt: createdAt(),
+  },
+  (t) => [index("scan_provenance_asset_idx").on(t.assetId, t.createdAt.desc())],
+);
+
 export const discoveryStatus = pgEnum("discovery_status", ["new", "accepted", "dismissed"]);
 
 /**

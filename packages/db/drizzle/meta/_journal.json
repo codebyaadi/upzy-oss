@@ -316,6 +316,13 @@
       "when": 1792922929572,
       "tag": "0044_asset_ownership_recheck",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1792927721023,
+      "tag": "0045_scanner_agents_provenance",
+      "breakpoints": true
     }
   ]
 }

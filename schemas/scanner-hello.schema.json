@@ -1,0 +1,44 @@
+{
+  "$id": "scanner-hello.schema.json",
+  "title": "ScannerHello",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "engine": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "engineVersion": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "templateSet": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "os": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "arch": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "protocol": {
+      "default": 1,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "version",
+    "engine"
+  ]
+}

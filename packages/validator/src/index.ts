@@ -10,4 +10,5 @@ export * from "./maintenance";
 export * from "./browser";
 export * from "./agent";
 export * from "./finding";
+export * from "./scanner";
 export { generateSchemas } from "./json-schemas";

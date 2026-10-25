@@ -8,6 +8,13 @@ import {
   AgentResultSchema,
 } from "./agent";
 import { FindingDraftSchema } from "./finding";
+import {
+  SCANNER_PROTOCOL,
+  ScannerHelloSchema,
+  ScannerJobSchema,
+  ScannerPullSchema,
+  ScannerResultSchema,
+} from "./scanner";
 
 /**
  * The contracts other programs (the Go agent, the Go scanner) are built against, as JSON Schema files in `schemas/`.
@@ -23,6 +30,10 @@ const CONTRACTS = [
   { file: "agent-job", title: "AgentJob", schema: AgentJobSchema, io: "output" },
   { file: "agent-result", title: "AgentResult", schema: AgentResultSchema, io: "input" },
   { file: "finding", title: "FindingDraft", schema: FindingDraftSchema, io: "input" },
+  { file: "scanner-hello", title: "ScannerHello", schema: ScannerHelloSchema, io: "input" },
+  { file: "scanner-pull", title: "ScannerPull", schema: ScannerPullSchema, io: "input" },
+  { file: "scanner-job", title: "ScannerJob", schema: ScannerJobSchema, io: "output" },
+  { file: "scanner-result", title: "ScannerResult", schema: ScannerResultSchema, io: "input" },
 ] as const;
 
 /** File name (relative to `schemas/`) to file contents, for every contract. Stable: the same code gives the same text. */
@@ -39,7 +50,7 @@ export function generateSchemas(): Record<string, string> {
     "JSON Schema (draft 2020-12) for what the API, probe agents and scanners exchange. **Generated** from",
     "`packages/validator` by `bun run schemas`; do not edit by hand. CI fails when these files are out of date.",
     "",
-    `Agent protocol version: **${AGENT_PROTOCOL}**. A change an older agent cannot read bumps it.`,
+    `Agent protocol version: **${AGENT_PROTOCOL}**, scanner protocol version: **${SCANNER_PROTOCOL}**. A change an older program cannot read bumps it.`,
     "",
     "| File | Direction | What it is |",
     "| ---- | --------- | ---------- |",
@@ -48,6 +59,10 @@ export function generateSchemas(): Record<string, string> {
     "| `agent-job.schema.json` | server to agent | one check to run (each item of `jobs` in the pull reply) |",
     "| `agent-result.schema.json` | agent to server | `POST /agent/jobs/{jobId}/result`: what it measured |",
     "| `finding.schema.json` | scanner to server | one security finding |",
+    "| `scanner-hello.schema.json` | scanner to server | `POST /scanner/hello`: who the scanner is and what it runs |",
+    "| `scanner-pull.schema.json` | scanner to server | `POST /scanner/jobs/pull`: how many scans it can take |",
+    "| `scanner-job.schema.json` | server to scanner | one verified asset to scan, with its rate limit and time limit |",
+    "| `scanner-result.schema.json` | scanner to server | `POST /scanner/jobs/{jobId}/result`: findings and the provenance of the scan |",
     "",
   ].join("\n");
   return out;

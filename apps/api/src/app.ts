@@ -29,6 +29,7 @@ import { overviewModule } from "./modules/overview";
 import { pingModule } from "./modules/ping";
 import { publicStatusModule } from "./modules/public-status";
 import { reportsModule } from "./modules/reports";
+import { scannerModule } from "./modules/scanner";
 import { securityModule } from "./modules/security";
 import { ssoModule } from "./modules/sso";
 import { statusPageModule, type StatusDns } from "./modules/status-page";
@@ -150,7 +151,8 @@ export const createApp = ({
           .use(changesModule(db, authP))
           .use(apiKeyModule(db, authP))
           .use(mcpModule(db))
-          .use(agentModule(db, { encryptionKey })),
+          .use(agentModule(db, { encryptionKey }))
+          .use(scannerModule(db)),
       )
       .use(channelModule(db, authP, encryptionKey))
       .use(alertRuleModule(db, authP))

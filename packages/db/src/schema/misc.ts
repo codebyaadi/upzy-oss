@@ -94,7 +94,9 @@ export const probeAgents = pgTable(
   {
     id: id(),
     name: text("name").notNull(),
-    /** The region whose checks it takes. One of the installation's PROBE_REGIONS. */
+    /** "probe" runs uptime checks for a region; "scanner" runs active security scans (upzy-scan). */
+    kind: text("kind").$type<"probe" | "scanner">().notNull().default("probe"),
+    /** The region whose checks a probe takes. One of the installation's PROBE_REGIONS. A scanner has none. */
     region: text("region").notNull(),
     hashedToken: text("hashed_token").notNull(),
     prefix: text("prefix").notNull().default(""),

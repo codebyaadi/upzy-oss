@@ -4,6 +4,7 @@ import { logQueueMetrics } from "@upzy/queue";
 import { z } from "zod";
 
 import { legacyRegionalProber } from "./legacy-region";
+import { runScanResultIngest } from "./roles/active-scan";
 import { runAdvisories } from "./roles/advisories";
 import { runAgent } from "./roles/agent";
 import { runBrowserProber } from "./roles/browser";
@@ -81,6 +82,7 @@ if (roles.has("scanner")) {
   running.push(runDiscovery(db, controller.signal));
   running.push(runAdvisories(db, controller.signal));
   running.push(runOwnership(db, controller.signal));
+  running.push(runScanResultIngest(db, controller.signal));
 }
 if (roles.has("agent")) {
   const aiConfig = loadAiConfig(process.env);

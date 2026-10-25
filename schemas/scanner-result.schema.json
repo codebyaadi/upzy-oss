@@ -1,0 +1,143 @@
+{
+  "$id": "scanner-result.schema.json",
+  "title": "ScannerResult",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "findings": {
+      "maxItems": 200,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "checkKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "info"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 5000
+          },
+          "remediation": {
+            "type": "string",
+            "maxLength": 5000
+          },
+          "subject": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "evidence": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "risk": {
+            "type": "object",
+            "properties": {
+              "kev": {
+                "type": "boolean"
+              },
+              "epss": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        },
+        "required": [
+          "checkKey",
+          "severity",
+          "title",
+          "description",
+          "remediation"
+        ]
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "engine": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "engineVersion": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "templateSet": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "templatesRun": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "requests": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        },
+        "finishedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        },
+        "rateLimitPerSecond": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "templates": {
+          "maxItems": 1000,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 120
+          }
+        }
+      },
+      "required": [
+        "engine",
+        "templatesRun",
+        "requests",
+        "startedAt",
+        "finishedAt",
+        "rateLimitPerSecond",
+        "templates"
+      ]
+    },
+    "error": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "findings",
+    "provenance"
+  ]
+}

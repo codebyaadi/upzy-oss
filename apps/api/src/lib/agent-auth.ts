@@ -17,18 +17,31 @@ export interface Agent {
   id: string;
   name: string;
   region: string;
+  kind: "probe" | "scanner";
 }
 
-/** The agent behind a `Bearer upzy_agent_...` header, or null when the token is unknown or revoked. */
+/** The agent behind a `Bearer upzy_agent_...` header, or null when the token is unknown, revoked or of another kind (a probe token cannot call the scanner API, nor the reverse). */
 export async function authenticateAgent(
   db: Db,
   header: string | null | undefined,
+  kind: "probe" | "scanner" = "probe",
 ): Promise<Agent | null> {
   const token = /^Bearer\s+(\S+)$/i.exec(header ?? "")?.[1];
   if (!token?.startsWith(AGENT_TOKEN_PREFIX)) return null;
   const [row] = await db
-    .select({ id: probeAgents.id, name: probeAgents.name, region: probeAgents.region })
+    .select({
+      id: probeAgents.id,
+      name: probeAgents.name,
+      region: probeAgents.region,
+      kind: probeAgents.kind,
+    })
     .from(probeAgents)
-    .where(and(eq(probeAgents.hashedToken, hash(token)), isNull(probeAgents.revokedAt)));
+    .where(
+      and(
+        eq(probeAgents.hashedToken, hash(token)),
+        eq(probeAgents.kind, kind),
+        isNull(probeAgents.revokedAt),
+      ),
+    );
   return row ?? null;
 }
