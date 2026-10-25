@@ -49,8 +49,14 @@ func main() {
 	defer stop()
 
 	logf("upzy-agent %s starting (up to %d checks at once)", version, concurrency)
+	keys, err := newKeyPair()
+	if err != nil {
+		logf("cannot make this agent's key: %v", err)
+		os.Exit(1)
+	}
 	a := &Agent{
 		client:      NewClient(apiURL, token),
+		keys:        keys,
 		concurrency: concurrency,
 		run:         RunProbe,
 		logf:        logf,

@@ -1,0 +1,14 @@
+{
+  "privateKey": "B7M3dH+EYmMVmbQY4mXkPRzUVmb6pPZN502kTJlkBKU=",
+  "publicKey": "rnohOjqc0SdDsw9LM3X7hCDUv1Z+Inejqe/c1cUqZRQ=",
+  "jobId": "0d6c2b8e-6a53-4a45-9c1e-3a8f0b8d2f10",
+  "secrets": {
+    "API_TOKEN": "s3cret-value",
+    "PASSWORD": "p@ss w0rd ✓"
+  },
+  "sealed": {
+    "epk": "0rPQW3eD7ZvB+TfDlp23x6G0ll08jAoVrxW8UuQzVic=",
+    "nonce": "ALvuAikr9cXWHPuw",
+    "ciphertext": "4O6H29h0mKVnfEWahMBuuVne6cb87IctZsOPg7jaRhWERQJDifM2pJ3ge7Az1cklJ+N6IgFGiaoYAq+O9rs010BWr+af6O8="
+  }
+}

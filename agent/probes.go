@@ -18,12 +18,14 @@ import (
 
 // Job is one check handed out by the server (schemas/agent-job.schema.json).
 type Job struct {
-	JobID     string            `json:"jobId"`
-	MonitorID string            `json:"monitorId"`
-	Type      string            `json:"type"`
-	Target    string            `json:"target"`
-	Config    json.RawMessage   `json:"config"`
-	Secrets   map[string]string `json:"secrets"`
+	JobID     string          `json:"jobId"`
+	MonitorID string          `json:"monitorId"`
+	Type      string          `json:"type"`
+	Target    string          `json:"target"`
+	Config    json.RawMessage `json:"config"`
+	// SealedSecrets are the monitor's secrets, encrypted to this agent. Secrets is what they open to.
+	SealedSecrets *Sealed           `json:"sealedSecrets,omitempty"`
+	Secrets       map[string]string `json:"-"`
 }
 
 // Result is what the agent reports (schemas/agent-result.schema.json). ResponseMs is null for a check that never got

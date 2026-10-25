@@ -3,6 +3,7 @@ import { PRIMARY_REGION, browserEndpoint, createDb, workerRegion } from "@upzy/d
 import { logQueueMetrics } from "@upzy/queue";
 import { z } from "zod";
 
+import { legacyRegionalProber } from "./legacy-region";
 import { runAdvisories } from "./roles/advisories";
 import { runAgent } from "./roles/agent";
 import { runBrowserProber } from "./roles/browser";
@@ -54,8 +55,12 @@ if (roles.has("scheduler")) {
   // Scheduled client reports (CLIENT_REPORTS=off disables them).
   running.push(runReports(db, controller.signal, parseReports(process.env)));
 }
-if (roles.has("prober"))
-  running.push(runProber(db, controller.signal, { encryptionKey: env.UPZY_ENCRYPTION_KEY }));
+if (roles.has("prober")) {
+  const gate = legacyRegionalProber();
+  if (gate.message) console.error(gate.message);
+  if (gate.run)
+    running.push(runProber(db, controller.signal, { encryptionKey: env.UPZY_ENCRYPTION_KEY }));
+}
 // Agents report to the API, which queues their results for the main server's worker; regional probers that read the
 // database themselves never take these.
 if (roles.has("prober") && workerRegion() === PRIMARY_REGION)

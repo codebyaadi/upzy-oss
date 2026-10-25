@@ -8,6 +8,7 @@ import { and, eq } from "drizzle-orm";
 
 import { createApp } from "../src/app";
 import { newAgentToken } from "../src/lib/agent-auth";
+import { newAgentKeyPair, openSealed } from "../src/lib/agent-seal";
 
 // Real Postgres. Needs: DATABASE_URL=... bun test
 const url = process.env.DATABASE_URL;
@@ -117,7 +118,7 @@ run("probe agent API (postgres)", () => {
       arch: "amd64",
     });
     expect(hello.status).toBe(200);
-    expect(hello.body).toMatchObject({ region: "eu-west", protocol: 1 });
+    expect(hello.body).toMatchObject({ region: "eu-west", protocol: 2 });
 
     await schedule(m.id);
     const pulled = await call(token, "/jobs/pull", { max: 50 });
@@ -181,18 +182,40 @@ run("probe agent API (postgres)", () => {
     expect(inc!.status).toBe("resolved");
   });
 
-  test("monitor secrets reach the agent for the length of the check, and only then", async () => {
+  test("monitor secrets reach only the agent that asked, sealed to its key and never in the clear", async () => {
+    const token = await makeAgent("eu-west");
+    const agent = newAgentKeyPair();
+    const m = await makeMonitor({
+      secretsEncrypted: encryptJson({ API_TOKEN: "s3cret-value" }, key),
+    });
+    await schedule(m.id);
+    const pulled = await call(token, "/jobs/pull", { max: 20, publicKey: agent.publicKey });
+    const job = pulled.body.jobs.find((j: any) => j.monitorId === m.id);
+    expect(job.secrets).toBeUndefined();
+    expect(JSON.stringify(pulled.body)).not.toContain("s3cret-value");
+    expect(openSealed(job.sealedSecrets, agent.privateKey, job.jobId)).toEqual({
+      API_TOKEN: "s3cret-value",
+    });
+    // Another agent's key cannot open it.
+    expect(() => openSealed(job.sealedSecrets, newAgentKeyPair().privateKey, job.jobId)).toThrow();
+    const [row] = await db.select().from(monitors).where(eq(monitors.id, m.id));
+    expect(JSON.stringify(row!.config)).not.toContain("s3cret-value");
+  });
+
+  test("a check that needs secrets is not handed to an agent that sent no key", async () => {
     const token = await makeAgent("eu-west");
     const m = await makeMonitor({
       secretsEncrypted: encryptJson({ API_TOKEN: "s3cret-value" }, key),
     });
     await schedule(m.id);
-    const job = (await call(token, "/jobs/pull", { max: 20 })).body.jobs.find(
-      (j: any) => j.monitorId === m.id,
-    );
-    expect(job.secrets).toEqual({ API_TOKEN: "s3cret-value" });
-    const [row] = await db.select().from(monitors).where(eq(monitors.id, m.id));
-    expect(JSON.stringify(row!.config)).not.toContain("s3cret-value");
+    const pulled = await call(token, "/jobs/pull", { max: 50 });
+    expect(JSON.stringify(pulled.body)).not.toContain("s3cret-value");
+    expect(pulled.body.jobs.filter((j: any) => j.monitorId === m.id)).toHaveLength(0);
+  });
+
+  test("a malformed public key is refused", async () => {
+    const token = await makeAgent("eu-west");
+    expect((await call(token, "/jobs/pull", { max: 5, publicKey: "not-a-key" })).status).toBe(400);
   });
 
   test("an agent only gets its own region's checks and can only answer what it was handed", async () => {

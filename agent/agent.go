@@ -18,7 +18,7 @@ import (
 // version is set at build time: go build -ldflags "-X main.version=1.2.3".
 var version = "dev"
 
-const protocol = 1
+const protocol = 2
 
 // apiError is a non-2xx answer from the server.
 type apiError struct {
@@ -87,11 +87,11 @@ func (c *Client) Hello(ctx context.Context) (helloReply, error) {
 	return r, err
 }
 
-func (c *Client) Pull(ctx context.Context, max int) ([]Job, error) {
+func (c *Client) Pull(ctx context.Context, max int, publicKey string) ([]Job, error) {
 	var r struct {
 		Jobs []Job `json:"jobs"`
 	}
-	err := c.post(ctx, "/agent/jobs/pull", map[string]any{"max": max}, &r)
+	err := c.post(ctx, "/agent/jobs/pull", map[string]any{"max": max, "publicKey": publicKey}, &r)
 	return r.Jobs, err
 }
 
@@ -108,6 +108,7 @@ func fatal(err error) bool {
 // Agent pulls checks, runs them and reports what it measured.
 type Agent struct {
 	client      *Client
+	keys        *keyPair
 	concurrency int
 	run         func(context.Context, Job) Result
 	logf        func(string, ...any)
@@ -164,7 +165,7 @@ func (a *Agent) Run(ctx context.Context, grace time.Duration) error {
 		if free > 50 {
 			free = 50
 		}
-		jobs, err := a.client.Pull(ctx, free)
+		jobs, err := a.client.Pull(ctx, free, a.keys.PublicKey())
 		if err != nil {
 			if fatal(err) {
 				return fmt.Errorf("the server refused this agent's token: %w", err)
@@ -204,7 +205,20 @@ func (a *Agent) Run(ctx context.Context, grace time.Duration) error {
 
 // runOne runs a check and reports it. It uses its own context: a shutdown lets checks in flight finish and report.
 func (a *Agent) runOne(j Job) {
-	res := a.run(context.Background(), j)
+	var res Result
+	if j.SealedSecrets != nil {
+		secrets, err := a.keys.Open(j.SealedSecrets, j.JobID)
+		if err != nil {
+			// Never run the check without its secrets: it would fail for the wrong reason and mislead the monitor.
+			ms := 0
+			res = Result{Status: "down", ResponseMs: &ms, Error: err.Error(), ErrorKind: "other"}
+		} else {
+			j.Secrets = secrets
+		}
+	}
+	if res.Status == "" {
+		res = a.run(context.Background(), j)
+	}
 	for attempt := 1; attempt <= 4; attempt++ {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		err := a.client.Report(ctx, j.JobID, res)

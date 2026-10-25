@@ -34,14 +34,28 @@
       },
       "additionalProperties": {}
     },
-    "secrets": {
+    "sealedSecrets": {
       "type": "object",
-      "propertyNames": {
-        "type": "string"
+      "properties": {
+        "epk": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]{43}=$"
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]{16}$"
+        },
+        "ciphertext": {
+          "type": "string",
+          "minLength": 24
+        }
       },
-      "additionalProperties": {
-        "type": "string"
-      }
+      "required": [
+        "epk",
+        "nonce",
+        "ciphertext"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [

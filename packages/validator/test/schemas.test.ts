@@ -56,7 +56,7 @@ describe("the contracts accept and refuse what they should", () => {
   });
 
   test("hello and pull", () => {
-    expect(AgentHelloSchema.parse({ version: "1.0.0" }).protocol).toBe(1);
+    expect(AgentHelloSchema.parse({ version: "1.0.0" }).protocol).toBe(2);
     expect(AgentPullSchema.parse({}).max).toBe(10);
     expect(AgentPullSchema.safeParse({ max: 500 }).success).toBe(false);
   });

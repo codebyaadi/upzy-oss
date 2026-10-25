@@ -4,7 +4,7 @@ import z from "zod";
  * The contract between the API and a probe agent (`upzy-agent`, written in Go). Everything an agent receives or sends
  * is defined here, so the two sides cannot drift apart. Bump `AGENT_PROTOCOL` for a change an old agent cannot read.
  */
-export const AGENT_PROTOCOL = 1;
+export const AGENT_PROTOCOL = 2;
 
 export const AgentHelloSchema = z.object({
   /** The agent's own version, for the operator's eyes. */
@@ -14,14 +14,31 @@ export const AgentHelloSchema = z.object({
   protocol: z.number().int().min(1).default(AGENT_PROTOCOL),
 });
 
+/** A 32-byte X25519 public key, base64 (44 characters). */
+const PublicKey = z.string().regex(/^[A-Za-z0-9+/]{43}=$/, "A 32-byte key, base64");
+
 export const AgentPullSchema = z.object({
   /** How many checks it can run right now. */
   max: z.number().int().min(1).max(50).default(10),
+  /**
+   * The agent's own X25519 public key, made when it started. Monitor secrets are encrypted to it; without it, checks
+   * that need secrets are not handed out.
+   */
+  publicKey: PublicKey.optional(),
+});
+
+/** Secrets sealed to one agent for one job (see apps/api/src/lib/agent-seal.ts for the scheme). All base64. */
+export const AgentSealedSchema = z.object({
+  /** The server's ephemeral X25519 public key for this job. */
+  epk: PublicKey,
+  nonce: z.string().regex(/^[A-Za-z0-9+/]{16}$/),
+  /** AES-256-GCM ciphertext of the JSON secrets, with the 16-byte tag at the end. */
+  ciphertext: z.string().min(24),
 });
 
 export const AGENT_MONITOR_TYPES = ["http", "tcp", "dns", "ssl", "flow"] as const;
 
-/** One check to run, with everything it needs. Secrets are sent decrypted, over TLS, for this one check. */
+/** One check to run, with everything it needs. Secrets, if the monitor has any, arrive sealed to the agent. */
 export const AgentJobSchema = z.object({
   jobId: z.uuid(),
   monitorId: z.uuid(),
@@ -29,7 +46,7 @@ export const AgentJobSchema = z.object({
   target: z.string(),
   /** The monitor's per-type options (method, headers, assertions, steps...). */
   config: z.record(z.string(), z.unknown()),
-  secrets: z.record(z.string(), z.string()).optional(),
+  sealedSecrets: AgentSealedSchema.optional(),
 });
 
 export const AGENT_ERROR_KINDS = [
@@ -57,3 +74,4 @@ export const AgentResultSchema = z.object({
 export type AgentHello = z.infer<typeof AgentHelloSchema>;
 export type AgentJob = z.infer<typeof AgentJobSchema>;
 export type AgentResult = z.infer<typeof AgentResultSchema>;
+export type AgentSealed = z.infer<typeof AgentSealedSchema>;

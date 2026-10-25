@@ -9,6 +9,10 @@
       "type": "integer",
       "minimum": 1,
       "maximum": 50
+    },
+    "publicKey": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{43}=$"
     }
   }
 }

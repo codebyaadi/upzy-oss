@@ -14,6 +14,7 @@ import { Elysia } from "elysia";
 import { z } from "zod";
 
 import { authenticateAgent } from "../lib/agent-auth";
+import { sealSecrets } from "../lib/agent-seal";
 
 const { monitors, probeAgents, jobs } = schema;
 
@@ -87,10 +88,17 @@ export const agentModule = (db: Db, opts: { encryptionKey: string }) =>
             await discard(db, job.id);
             continue;
           }
-          let secrets: Record<string, string> | undefined;
+          let sealedSecrets: AgentJob["sealedSecrets"];
           if (m.secretsEncrypted) {
+            // Secrets are never sent in the clear: only to an agent that gave a key to seal them to.
             try {
-              secrets = decryptJson<Record<string, string>>(m.secretsEncrypted, opts.encryptionKey);
+              if (!body.publicKey)
+                throw new Error("This agent sent no public key, so it cannot receive secrets");
+              sealedSecrets = sealSecrets(
+                decryptJson<Record<string, string>>(m.secretsEncrypted, opts.encryptionKey),
+                body.publicKey,
+                job.id,
+              );
             } catch (e) {
               await fail(db, job, e);
               continue;
@@ -102,7 +110,7 @@ export const agentModule = (db: Db, opts: { encryptionKey: string }) =>
             type,
             target: m.target,
             config: m.config as Record<string, unknown>,
-            ...(secrets ? { secrets } : {}),
+            ...(sealedSecrets ? { sealedSecrets } : {}),
           });
         }
         return { jobs: out };

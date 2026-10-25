@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -41,7 +43,7 @@ func (f *fakeAPI) handler() http.Handler {
 			http.Error(w, "bad hello", 400)
 			return
 		}
-		_, _ = w.Write([]byte(`{"agent":"test","region":"eu-west","protocol":1,"pollSeconds":1}`))
+		_, _ = w.Write([]byte(`{"agent":"test","region":"eu-west","protocol":2,"pollSeconds":1}`))
 	}))
 	mux.HandleFunc("/agent/jobs/pull", auth(func(w http.ResponseWriter, _ *http.Request) {
 		f.mu.Lock()
@@ -78,7 +80,7 @@ func TestAgentRunsAChargedCheckEndToEnd(t *testing.T) {
 	api := httptest.NewServer(f.handler())
 	defer api.Close()
 
-	a := &Agent{client: NewClient(api.URL, "upzy_agent_good"), concurrency: 4, run: RunProbe, logf: t.Logf, pollEvery: 50 * time.Millisecond}
+	a := &Agent{client: NewClient(api.URL, "upzy_agent_good"), keys: mustKeys(t), concurrency: 4, run: RunProbe, logf: t.Logf, pollEvery: 50 * time.Millisecond}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- a.Run(ctx, 5*time.Second) }()
@@ -115,7 +117,7 @@ func TestAgentStopsWhenTheTokenIsRefused(t *testing.T) {
 	f := &fakeAPI{results: map[string]Result{}}
 	api := httptest.NewServer(f.handler())
 	defer api.Close()
-	a := &Agent{client: NewClient(api.URL, "upzy_agent_revoked"), concurrency: 1, run: RunProbe, logf: t.Logf, pollEvery: time.Second}
+	a := &Agent{client: NewClient(api.URL, "upzy_agent_revoked"), keys: mustKeys(t), concurrency: 1, run: RunProbe, logf: t.Logf, pollEvery: time.Second}
 	err := a.Run(context.Background(), time.Second)
 	if err == nil || !strings.Contains(err.Error(), "refused") {
 		t.Fatalf("a revoked token ends the agent with a clear message, got %v", err)
@@ -130,5 +132,73 @@ func TestResultJSONMatchesTheContract(t *testing.T) {
 	up, _ := json.Marshal(Result{Status: "up", ResponseMs: ptr(12), TLSDaysLeft: ptr(40)})
 	if string(up) != `{"status":"up","responseMs":12,"tlsDaysLeft":40}` {
 		t.Fatalf("%s", up)
+	}
+}
+
+func mustKeys(t *testing.T) *keyPair {
+	t.Helper()
+	k, err := newKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return k
+}
+
+func TestAgentOpensSealedSecretsBeforeRunningTheCheck(t *testing.T) {
+	f := loadFixture(t)
+	seed, _ := base64.StdEncoding.DecodeString(f.PrivateKey)
+	keys, _ := keyPairFromSeed(seed)
+
+	var got map[string]string
+	var ran bool
+	reported := make(chan Result, 1)
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var res Result
+		_ = json.NewDecoder(r.Body).Decode(&res)
+		reported <- res
+		w.WriteHeader(202)
+	}))
+	defer api.Close()
+	a := &Agent{
+		client: NewClient(api.URL, "upzy_agent_good"), keys: keys, logf: t.Logf,
+		run: func(_ context.Context, j Job) Result {
+			ran, got = true, j.Secrets
+			return Result{Status: "up", ResponseMs: ptr(5)}
+		},
+	}
+	a.runOne(Job{JobID: f.JobID, Type: "http", SealedSecrets: &f.Sealed})
+	<-reported
+	if !ran || !reflect.DeepEqual(got, f.Secrets) {
+		t.Fatalf("the check must run with the opened secrets: ran=%v got=%v", ran, got)
+	}
+
+	// Another key cannot open it: the check must not run without its secrets, and says why.
+	other, _ := newKeyPair()
+	ran = false
+	a.keys = other
+	a.runOne(Job{JobID: f.JobID, Type: "http", SealedSecrets: &f.Sealed})
+	res := <-reported
+	if ran || res.Status != "down" || res.ErrorKind != "other" || !strings.Contains(res.Error, "decrypted") {
+		t.Fatalf("%v %+v", ran, res)
+	}
+}
+
+func TestPullSendsThePublicKey(t *testing.T) {
+	keys := mustKeys(t)
+	var seen string
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			PublicKey string `json:"publicKey"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&in)
+		seen = in.PublicKey
+		_, _ = w.Write([]byte(`{"jobs":[]}`))
+	}))
+	defer api.Close()
+	if _, err := NewClient(api.URL, "t").Pull(context.Background(), 5, keys.PublicKey()); err != nil {
+		t.Fatal(err)
+	}
+	if seen != keys.PublicKey() {
+		t.Fatalf("got %q", seen)
 	}
 }

@@ -48,7 +48,7 @@ Binaries for linux (amd64, arm64), windows and macOS are attached to each `agent
 ## Safety
 
 - **Public addresses only.** A name is resolved and every address must be public (one private record rejects the name). The socket itself also refuses a private address at connect time, so redirects, number spellings such as `2130706433` or `0x7f.1`, IPv4-in-IPv6 forms and DNS rebinding cannot get around the first check. Every redirect hop is checked again. Environment proxies are ignored.
-- **Secrets.** A monitor's secrets arrive for one check, over TLS, are used in that check and are scrubbed from any error before it is reported. They are never written to disk or logged.
+- **Secrets.** A monitor's secrets are encrypted to a key this agent makes when it starts (X25519, HKDF-SHA256, AES-256-GCM, bound to the check), so only this process can read them, not the network, a proxy or another agent. They are used in that one check, scrubbed from any error before it is reported, and never written to disk or logged.
 - **The token** can only fetch checks for its own region and answer checks it was handed. Revoke it by setting `revoked_at` on its `probe_agents` row.
 
 ## Develop

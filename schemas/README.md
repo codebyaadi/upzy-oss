@@ -3,7 +3,7 @@
 JSON Schema (draft 2020-12) for what the API, probe agents and scanners exchange. **Generated** from
 `packages/validator` by `bun run schemas`; do not edit by hand. CI fails when these files are out of date.
 
-Agent protocol version: **1**. A change an older agent cannot read bumps it.
+Agent protocol version: **2**. A change an older agent cannot read bumps it.
 
 | File | Direction | What it is |
 | ---- | --------- | ---------- |
