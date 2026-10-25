@@ -12,6 +12,7 @@
     "drizzle:studio": "bun --env-file=../../.env --bun run drizzle-kit studio",
     "migrate": "bun src/migrate.ts",
     "db:seed": "bun --env-file=../../.env src/seed.ts",
+    "db:seed:load": "bun --env-file=../../.env src/seed-load.ts",
     "check-types": "tsc --noEmit",
     "lint": "oxlint"
   },

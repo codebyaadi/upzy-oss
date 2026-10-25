@@ -1,5 +1,6 @@
 import { createGateway, createModelDiscovery, loadAiConfig, createDbStores } from "@upzy/ai";
 import { browserEndpoint, createDb } from "@upzy/db";
+import { logQueueMetrics } from "@upzy/queue";
 import { z } from "zod";
 
 import { runAgent } from "./roles/agent";
@@ -36,6 +37,10 @@ const controller = new AbortController();
 for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => controller.abort());
 
 const running: Promise<void>[] = [];
+// Queue depth and start lag, one line per queue (METRICS_INTERVAL_SECONDS, default 60; 0 turns it off).
+const metricsSeconds = Number(process.env.METRICS_INTERVAL_SECONDS ?? 60);
+if (Number.isFinite(metricsSeconds))
+  running.push(logQueueMetrics(db, controller.signal, { intervalMs: metricsSeconds * 1000 }));
 if (roles.has("scheduler")) {
   running.push(runScheduler(db, controller.signal));
   // Housekeeping rides along with the scheduler, which every deployment runs: old checks and finished jobs are

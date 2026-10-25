@@ -2,6 +2,10 @@ import { schema, type Db } from "@upzy/db";
 import { sql } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 
+import { jobMetrics } from "./metrics";
+
+export * from "./metrics";
+
 const { jobs } = schema;
 
 /** A Db or a transaction handle, so jobs can be enqueued atomically with other writes. */
@@ -21,6 +25,8 @@ export interface Job<T = unknown> {
   payload: T;
   attempts: number;
   maxAttempts: number;
+  /** Milliseconds this job waited past its run time before it was claimed (the database's clock). */
+  lagMs: number;
 }
 
 export async function enqueue<T>(
@@ -53,6 +59,7 @@ export async function claim(db: Executor, queue: string, limit: number): Promise
     payload: unknown;
     attempts: number;
     max_attempts: number;
+    lag_ms: number;
   }>(sql`
     update jobs set state = 'running', attempts = attempts + 1, locked_at = now()
     where id in (
@@ -62,13 +69,15 @@ export async function claim(db: Executor, queue: string, limit: number): Promise
       limit ${limit}
       for update skip locked
     )
-    returning id, queue, payload, attempts, max_attempts`);
+    returning id, queue, payload, attempts, max_attempts,
+      extract(epoch from (now() - run_at)) * 1000 as lag_ms`);
   return [...rows].map((r) => ({
     id: r.id,
     queue: r.queue,
     payload: r.payload,
     attempts: r.attempts,
     maxAttempts: r.max_attempts,
+    lagMs: Number(r.lag_ms),
   }));
 }
 
@@ -131,12 +140,21 @@ export async function work<T>(
     }
     for (const job of claimed) {
       const p = (async () => {
+        const started = performance.now();
+        let ok = true;
         try {
           await handler(job.payload as T, job as Job<T>);
           await complete(db, job.id);
         } catch (e) {
+          ok = false;
           await fail(db, job, e).catch((err) => console.error("fail()", err));
         }
+        jobMetrics.record({
+          queue,
+          lagMs: job.lagMs,
+          durationMs: performance.now() - started,
+          ok,
+        });
       })().finally(() => inFlight.delete(p));
       inFlight.add(p);
     }
