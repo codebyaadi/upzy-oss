@@ -153,7 +153,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	logf("upzy-scan %s starting (nuclei %s, %d templates, set %s)", version, engineVersion, n, setID)
-	w := &Worker{client: NewClient(apiURL, token), scanner: &Scanner{TemplateDir: dir, SetID: setID}, logf: logf, poll: 30 * time.Second}
+	w := &Worker{client: NewClient(apiURL, token), scanner: &Scanner{TemplateDir: dir, SetID: setID, allowLocal: allowLocalTargets}, logf: logf, poll: 30 * time.Second}
 	if err := w.Run(ctx); err != nil {
 		logf("%v", err)
 		os.Exit(1)

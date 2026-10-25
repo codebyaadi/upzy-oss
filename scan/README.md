@@ -52,5 +52,7 @@ go build -ldflags "-X main.version=dev" -o upzy-scan .
 
 - `bun scan/scripts/gen-templates.ts` regenerates `templates/upzy` from `packages/security/src/checks/active.ts` (`--check` fails if they differ; CI runs it).
 - `bun scan/scripts/licenses.ts` rewrites `THIRD_PARTY_LICENSES.md`, the licence of every Go module in the binary (`--check` in CI). It fails on a copyleft or unrecognised licence until someone has looked at it.
+- `go build -tags e2e` makes a binary that may scan servers on this machine, to try the whole path against a local test site. Never ship or run that build against real assets; release builds refuse every non-public address.
+- The binary is large (about 160 MB), because it contains nuclei and its dependencies.
 - The first build compiles nuclei and its dependencies and takes several minutes.
 - There is no release workflow on purpose (see _Build it yourself_). Do not add one without settling the GPL-2.0 module.

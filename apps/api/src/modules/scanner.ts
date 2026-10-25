@@ -32,7 +32,8 @@ const unauthorized = () =>
 export function targetOf(asset: { kind: "domain" | "subdomain" | "url"; value: string }) {
   if (asset.kind === "url") {
     const u = new URL(asset.value);
-    return { host: u.hostname, url: `https://${u.host}${u.pathname}${u.search}` };
+    const scheme = u.protocol === "http:" ? "http" : "https";
+    return { host: u.hostname, url: `${scheme}://${u.host}${u.pathname}${u.search}` };
   }
   return { host: asset.value, url: `https://${asset.value}/` };
 }

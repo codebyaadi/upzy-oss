@@ -13,20 +13,35 @@ import { join } from "node:path";
 const scanDir = join(import.meta.dir, "..");
 const outFile = join(scanDir, "THIRD_PARTY_LICENSES.md");
 
-const listed = Bun.spawnSync(
-  [
-    "go",
-    "list",
-    "-deps",
-    "-f",
-    "{{with .Module}}{{if not .Main}}{{.Path}}|{{.Version}}|{{.Dir}}{{end}}{{end}}",
-    ".",
-  ],
-  { cwd: scanDir, env: { ...process.env, GOFLAGS: "-mod=mod" } },
-);
-if (listed.exitCode !== 0) {
-  console.error(listed.stderr.toString());
-  process.exit(1);
+// The modules depend on the platform (some are Windows-only), so the record is the union over the platforms we build for.
+const lines = new Set<string>();
+for (const goos of ["linux", "windows"]) {
+  const listed = Bun.spawnSync(
+    [
+      "go",
+      "list",
+      "-deps",
+      "-f",
+      "{{with .Module}}{{if not .Main}}{{.Path}}|{{.Version}}|{{.Dir}}{{end}}{{end}}",
+      ".",
+    ],
+    {
+      cwd: scanDir,
+      env: {
+        ...process.env,
+        GOFLAGS: "-mod=mod",
+        GOTOOLCHAIN: "go1.26.9",
+        GOOS: goos,
+        GOARCH: "amd64",
+        CGO_ENABLED: "0",
+      },
+    },
+  );
+  if (listed.exitCode !== 0) {
+    console.error(listed.stderr.toString());
+    process.exit(1);
+  }
+  for (const l of listed.stdout.toString().split(/\r?\n/)) if (l) lines.add(l);
 }
 
 const rules: [string, RegExp][] = [
@@ -78,8 +93,7 @@ function licenceOf(dir: string): string {
   return found.size ? [...found].sort().join(" AND ") : "UNKNOWN";
 }
 
-// `go list -deps` prints one line per package; a module is listed once.
-const rows = [...new Set(listed.stdout.toString().split("\n").filter(Boolean))]
+const rows = [...lines]
   .map((l) => {
     const [path, version, dir] = l.split("|");
     const licence =
@@ -123,6 +137,10 @@ if (bad.length) {
 if (process.argv.includes("--check")) {
   const current = existsSync(outFile) ? readFileSync(outFile, "utf8") : "";
   if (current !== md) {
+    const have = new Set(current.split(/\r?\n/));
+    const want = new Set(md.split(/\r?\n/));
+    for (const l of want) if (!have.has(l)) console.error(`+ ${l}`);
+    for (const l of have) if (!want.has(l)) console.error(`- ${l}`);
     console.error(
       "scan/THIRD_PARTY_LICENSES.md is out of date: run `bun scan/scripts/licenses.ts` and commit it.",
     );

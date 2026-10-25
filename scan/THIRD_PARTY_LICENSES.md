@@ -6,9 +6,9 @@ template files and their licence are described in `templates/UPSTREAM.md`.
 
 ## Summary
 
-- MIT: 184
-- Apache-2.0: 102
-- BSD-3-Clause: 53
+- MIT: 185
+- Apache-2.0: 105
+- BSD-3-Clause: 56
 - BSD-2-Clause: 21
 - MPL-2.0: 8
 - Unlicense: 3
@@ -81,6 +81,7 @@ template files and their licence are described in `templates/UPSTREAM.md`.
 | github.com/buger/jsonparser | v1.1.2 | MIT |
 | github.com/bytedance/gopkg | v0.1.3 | Apache-2.0 |
 | github.com/bytedance/sonic | v1.15.0 | Apache-2.0 |
+| github.com/bytedance/sonic/loader | v0.5.0 | Apache-2.0 |
 | github.com/caddyserver/certmagic | v0.25.0 | Apache-2.0 |
 | github.com/caddyserver/zerossl | v0.1.3 | MIT |
 | github.com/censys/censys-sdk-go | v0.19.1 | MIT (README badge; the module has no LICENSE file) |
@@ -97,6 +98,7 @@ template files and their licence are described in `templates/UPSTREAM.md`.
 | github.com/clbanning/mxj/v2 | v2.7.0 | MIT |
 | github.com/cloudflare/cfssl | v1.6.4 | BSD-2-Clause |
 | github.com/cloudflare/circl | v1.6.3 | BSD-3-Clause |
+| github.com/cloudwego/base64x | v0.1.6 | Apache-2.0 |
 | github.com/cncf/xds/go | v0.0.0-20260202195803-dba9d589def2 | Apache-2.0 |
 | github.com/cnf/structhash | v0.0.0-20250313080605-df4c6cc74a9a | ISC |
 | github.com/containerd/errdefs | v1.0.0 | Apache-2.0 |
@@ -336,8 +338,11 @@ template files and their licence are described in `templates/UPSTREAM.md`.
 | github.com/tidwall/rtred | v0.1.2 | MIT |
 | github.com/tidwall/tinyqueue | v0.1.1 | ISC |
 | github.com/tim-ywliu/nested-logrus-formatter | v1.3.2 | MIT |
+| github.com/tklauser/go-sysconf | v0.3.16 | BSD-3-Clause |
+| github.com/tklauser/numcpus | v0.11.0 | Apache-2.0 |
 | github.com/tmthrgd/go-hex | v0.0.0-20190904060850-447a3041c3bc | BSD-3-Clause |
 | github.com/trivago/tgo | v1.0.7 | Apache-2.0 |
+| github.com/twitchyliquid64/golang-asm | v0.15.1 | BSD-3-Clause |
 | github.com/ugorji/go/codec | v1.2.11 | MIT |
 | github.com/ulikunitz/xz | v0.5.15 | BSD-2-Clause |
 | github.com/valyala/bytebufferpool | v1.0.0 | MIT |
@@ -364,6 +369,7 @@ template files and their licence are described in `templates/UPSTREAM.md`.
 | github.com/yuin/goldmark | v1.7.17 | MIT |
 | github.com/yuin/goldmark-emoji | v1.0.6 | MIT |
 | github.com/yusufpapurcu/wmi | v1.2.4 | MIT |
+| github.com/zcalusic/sysinfo | v1.1.3 | MIT |
 | github.com/zeebo/blake3 | v0.2.4 | CC0-1.0 |
 | github.com/zmap/rc2 | v0.0.0-20190804163417-abaa70531248 | Apache-2.0 |
 | github.com/zmap/zcrypto | v0.0.0-20240803002437-3a861682ac77 | Apache-2.0 |
@@ -381,6 +387,7 @@ template files and their licence are described in `templates/UPSTREAM.md`.
 | go.uber.org/zap/exp | v0.3.0 | MIT |
 | go4.org | v0.0.0-20230225012048-214862532bf5 | Apache-2.0 |
 | goftp.io/server/v2 | v2.0.1 | MIT |
+| golang.org/x/arch | v0.3.0 | BSD-3-Clause |
 | golang.org/x/crypto | v0.53.0 | BSD-3-Clause |
 | golang.org/x/exp | v0.0.0-20260527015227-08cc5374adb3 | BSD-3-Clause |
 | golang.org/x/mod | v0.37.0 | BSD-3-Clause |
