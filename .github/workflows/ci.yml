@@ -79,3 +79,25 @@ jobs:
       - name: Schema matches the migrations (no drift)
         working-directory: packages/db
         run: bunx --bun drizzle-kit check
+
+  # The probe agent is a separate Go program (agent/): format, vet, test, and make sure it still cross-compiles.
+  agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: agent
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: agent/go.mod
+      - name: Formatted
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+      - run: go vet ./...
+      - run: go test ./...
+      - name: Cross-compiles
+        run: |
+          for t in linux/amd64 linux/arm64 windows/amd64; do
+            GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build -trimpath -o /dev/null .
+          done

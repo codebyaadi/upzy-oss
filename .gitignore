@@ -44,3 +44,8 @@ deploy/aws/.state*
 deploy/.failed-images
 deploy/.deploy-hash
 apps/web/AGENTS.md
+
+# Go agent builds
+/agent/upzy-agent
+/agent/upzy-agent.exe
+/agent/dist/

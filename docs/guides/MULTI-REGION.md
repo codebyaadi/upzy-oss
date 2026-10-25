@@ -45,9 +45,9 @@ A region is a worker running the prober role somewhere else. It reads its checks
 
 3. **Open the database to those machines only**: a firewall allow-list of their addresses, TLS, and a user with just the access the worker needs. A prober that can reach Postgres can read everything the worker can, so run these on machines you control. If that is not acceptable, use a probe agent instead, which talks to the API and needs neither (below).
 
-### Probe agent API (the server side is ready; the agent program is not built yet)
+### Probe agent (no database access needed)
 
-The API has the endpoints a probe agent needs, so a region can run without database access or the encryption key:
+`upzy-agent` (in [agent/](../../agent/README.md)) is a small Go program that runs the checks of a region and reports them to the API, so that region needs neither database access nor the encryption key. It runs http, tcp, dns, ssl and flow monitors; browser and heartbeat monitors stay on the main server. Setup and options are in its README. The API it talks to:
 
 1. Create a token for a region (it must be in `PROBE_REGIONS`). It is printed once and only its hash is kept:
 
