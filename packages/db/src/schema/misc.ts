@@ -1,4 +1,5 @@
-import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 import { createdAt, id, jsonb } from "./_helpers";
 import { organizations, users } from "./auth";
@@ -14,16 +15,39 @@ export const systemState = pgTable("system_state", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const apiKeys = pgTable("api_keys", {
-  id: id(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organizations.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  hashedKey: text("hashed_key").notNull(),
-  role: text("role").notNull(),
-  createdAt: createdAt(),
-});
+/**
+ * Keys for tools that act as a person without a browser session (the MCP server). Only the SHA-256 of the key is
+ * kept; the key itself is shown once at creation. A key acts as the member who made it, so it can never see more than
+ * they can (a member limited to some workspaces stays limited), and is further narrowed to its `scopes`.
+ */
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: id(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    hashedKey: text("hashed_key").notNull(),
+    /** The start of the key, so a person can tell which one is which. Not enough to use it. */
+    prefix: text("prefix").notNull().default(""),
+    /** e.g. "monitors:read". See apps/api/src/lib/api-keys.ts. */
+    scopes: text("scopes")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    role: text("role").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("api_keys_hashed_key_key").on(t.hashedKey),
+    index("api_keys_organization_idx").on(t.organizationId),
+  ],
+);
 
 /**
  * Who did what, when, from where. Written for every mutating API request. The payload holds field

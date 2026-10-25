@@ -9,6 +9,7 @@ import { accessModule } from "./modules/access";
 import { accountModule } from "./modules/account";
 import { aiModule, type AiDeps } from "./modules/ai";
 import { alertRuleModule } from "./modules/alert-rule";
+import { apiKeyModule } from "./modules/api-keys";
 import { assetModule } from "./modules/asset";
 import { auditModule } from "./modules/audit";
 import { billingModule } from "./modules/billing";
@@ -20,6 +21,7 @@ import { findingModule } from "./modules/finding";
 import { health } from "./modules/health";
 import { incidentModule } from "./modules/incident";
 import { maintenanceModule } from "./modules/maintenance";
+import { mcpModule } from "./modules/mcp";
 import { monitorModule } from "./modules/monitor";
 import { onboardingModule } from "./modules/onboarding";
 import { overviewModule } from "./modules/overview";
@@ -141,7 +143,10 @@ export const createApp = ({
         }),
       )
       .use(monitorModule(db, authP, billing, { encryptionKey, apiOrigin }))
-      .use(changesModule(db, authP))
+      // Grouped: a very long chain of plugins makes the compiler give up inferring the app type.
+      .use(
+        new Elysia().use(changesModule(db, authP)).use(apiKeyModule(db, authP)).use(mcpModule(db)),
+      )
       .use(channelModule(db, authP, encryptionKey))
       .use(alertRuleModule(db, authP))
       .use(incidentModule(db, authP))

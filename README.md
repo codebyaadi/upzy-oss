@@ -50,7 +50,7 @@ Upzy puts both in one place and keeps the output readable:
     </td>
     <td valign="top">
       <h3>AI that explains</h3>
-      Plain-English impact and fixes for findings, a likely cause when a monitor goes down, postmortem drafts, a weekly digest and a read-only copilot for your workspace. Opt-in, on your own key (Groq, OpenAI, Anthropic, Gemini or OpenRouter).
+      Plain-English impact and fixes for findings, a likely cause when a monitor goes down, postmortem drafts, a weekly digest and a read-only copilot for your workspace, and a read-only [MCP server](docs/guides/MCP.md) so tools like Claude Code can query your monitoring. Opt-in, on your own key (Groq, OpenAI, Anthropic, Gemini or OpenRouter).
     </td>
   </tr>
 </table>

@@ -43,6 +43,8 @@ export const DEFAULT_RULES: Rule[] = [
   // Cron jobs and workers report in here, often from one shared address.
   { match: (p) => p.startsWith("/ping/"), bucket: "ping", max: 600, windowMs: MINUTE },
   // The free checkers open connections to whatever site a stranger names, so keep them slow.
+  // Keys are not browser sessions; a stuck client should not be able to hammer the database.
+  { match: (p) => p.startsWith("/mcp"), bucket: "mcp", max: 120, windowMs: MINUTE },
   { match: (p) => p.startsWith("/tools/"), bucket: "tools", max: 10, windowMs: MINUTE },
   // Public status pages are read by the web server on behalf of every visitor, so one address does a lot of the traffic.
   { match: (p) => p.startsWith("/public/"), bucket: "public", max: 600, windowMs: MINUTE },

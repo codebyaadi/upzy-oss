@@ -2,6 +2,7 @@
 
 import { Switch } from "@upzy/ui/components/switch";
 
+import { ApiKeysPanel } from "@/components/app/api-keys-panel";
 import { ViewOnlyNote } from "@/components/app/can";
 import { SsoPanel } from "@/components/app/sso-panel";
 import { TwoFactorSetup } from "@/components/app/two-factor-setup";
@@ -51,6 +52,8 @@ export default function SecurityPage() {
         </Panel>
 
         {can("admin") && <SsoPanel orgId={orgId} />}
+
+        {can("admin") && <ApiKeysPanel orgId={orgId} />}
 
         {can("admin") ? (
           <Panel>
