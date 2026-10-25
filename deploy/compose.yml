@@ -53,7 +53,14 @@ services:
     image: pgvector/pgvector:pg18
     restart: unless-stopped
     # Query statistics for finding slow statements.
-    command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements", "-c", "pg_stat_statements.track=all"]
+    command:
+      [
+        "postgres",
+        "-c",
+        "shared_preload_libraries=pg_stat_statements",
+        "-c",
+        "pg_stat_statements.track=all",
+      ]
     environment:
       POSTGRES_DB: upzy
       POSTGRES_USER: upzy
