@@ -32,7 +32,7 @@
     "@types/node": "catalog:dev",
     "@types/nodemailer": "^7.0.0",
     "@upzy/typescript-config": "workspace:*",
-    "ai": "^7.0.142",
+    "ai": "^7.0.153",
     "oxlint": "catalog:dev",
     "typescript": "catalog:dev"
   }
