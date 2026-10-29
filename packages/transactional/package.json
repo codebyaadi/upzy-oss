@@ -19,14 +19,14 @@
   },
   "devDependencies": {
     "@react-email/preview-server": "5.2.10",
-    "@react-email/ui": "6.11.1",
+    "@react-email/ui": "6.11.3",
     "@types/bun": "catalog:dev",
     "@types/node": "catalog:dev",
     "@types/react": "catalog:ui",
     "@types/react-dom": "catalog:ui",
     "@upzy/typescript-config": "workspace:*",
     "oxlint": "catalog:dev",
-    "react-email": "6.11.1",
+    "react-email": "6.11.3",
     "typescript": "catalog:dev"
   }
 }

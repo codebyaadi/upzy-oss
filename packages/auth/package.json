@@ -21,11 +21,11 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@better-auth/sso": "1.7.10",
+    "@better-auth/sso": "1.7.13",
     "@upzy/db": "workspace:*",
     "@upzy/queue": "workspace:*",
     "@upzy/transactional": "workspace:*",
-    "better-auth": "^1.4.18",
+    "better-auth": "^1.7.13",
     "drizzle-orm": "^0.45.4"
   },
   "devDependencies": {

@@ -27,7 +27,7 @@
     "@upzy/security": "workspace:*",
     "@upzy/transactional": "workspace:*",
     "@upzy/validator": "workspace:*",
-    "ai": "^7.0.142",
+    "ai": "^7.0.153",
     "drizzle-orm": "^0.45.4",
     "elysia": "^1.4.0",
     "zod": "catalog:"

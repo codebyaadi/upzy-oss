@@ -13,14 +13,14 @@
     "eval:dry": "bun eval/run.ts --dry"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^4.0.81",
-    "@ai-sdk/google": "^4.0.98",
-    "@ai-sdk/groq": "^4.0.62",
-    "@ai-sdk/openai": "^4.0.95",
+    "@ai-sdk/anthropic": "^4.0.88",
+    "@ai-sdk/google": "^4.0.105",
+    "@ai-sdk/groq": "^4.0.70",
+    "@ai-sdk/openai": "^4.0.102",
     "@openrouter/ai-sdk-provider": "^3.1.0",
     "@upzy/crypto": "workspace:*",
     "@upzy/db": "workspace:*",
-    "ai": "^7.0.142",
+    "ai": "^7.0.153",
     "drizzle-orm": "^0.45.4",
     "zod": "catalog:"
   },
