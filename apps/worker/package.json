@@ -30,7 +30,7 @@
   "devDependencies": {
     "@types/bun": "catalog:dev",
     "@types/node": "catalog:dev",
-    "@types/nodemailer": "^7.0.0",
+    "@types/nodemailer": "^8.0.2",
     "@upzy/typescript-config": "workspace:*",
     "ai": "^7.0.142",
     "oxlint": "catalog:dev",
