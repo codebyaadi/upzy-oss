@@ -159,6 +159,7 @@ run("ownership re-check (postgres)", () => {
       },
       tlsLegacy: async () => false,
       tcpOpen: async () => true,
+      grabBanner: async () => null,
       vuln: { http: async () => ({}), cache: { get: async () => undefined, set: async () => {} } },
     } as unknown as Deps;
     const verified = await runChecks(asset, { deps: scanDeps, verified: true });

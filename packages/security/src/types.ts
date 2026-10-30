@@ -43,6 +43,12 @@ export interface Deps {
   tlsLegacy: (host: string, version: "TLSv1" | "TLSv1.1") => Promise<boolean>;
   /** Whether a TCP connection to this port of the host's public address succeeds. */
   tcpOpen: (host: string, port: number) => Promise<boolean>;
+  /**
+   * What a service on this port says about itself: connects to the host's public address, optionally sends one short
+   * read-only command, and returns the first bytes it answers with (as latin1 text). Null when nothing is listening
+   * or it says nothing.
+   */
+  grabBanner: (host: string, port: number, send?: string) => Promise<string | null>;
   /** Google Safe Browsing key. The reputation check does nothing without it. */
   safeBrowsingKey?: string;
   vuln: VulnDeps;

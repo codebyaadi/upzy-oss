@@ -4,6 +4,7 @@ import { connect } from "node:tls";
 
 import { resolvePublic, safeFetch } from "@upzy/probes";
 
+import { readBanner } from "./banner";
 import type { Deps, TlsInfo } from "./types";
 import { httpJson, memoryCache } from "./vuln/http";
 
@@ -95,6 +96,11 @@ async function tcpOpen(host: string, port: number): Promise<boolean> {
   });
 }
 
+async function grabBanner(host: string, port: number, send?: string): Promise<string | null> {
+  const { address } = await resolvePublic(host);
+  return readBanner(address, port, send);
+}
+
 export const defaultDeps: Deps = {
   fetch: (url, opts) => safeFetch(url, { timeoutMs: 10_000, ...opts }),
   resolveTxt: (h) => orEmpty(dns.resolveTxt(h)),
@@ -106,6 +112,7 @@ export const defaultDeps: Deps = {
   tls: tlsInfo,
   tlsLegacy,
   tcpOpen,
+  grabBanner,
   safeBrowsingKey: process.env.GOOGLE_SAFE_BROWSING_KEY || undefined,
   vuln: { http: httpJson, cache: memoryCache(), nvdApiKey: process.env.NVD_API_KEY },
 };

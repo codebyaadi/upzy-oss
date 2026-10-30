@@ -364,6 +364,7 @@ describe("cve check", () => {
     resolveCaa: async () => [{}],
     tlsLegacy: async () => false,
     tcpOpen: async () => false,
+    grabBanner: async () => null,
     tls: async () => ({
       protocol: "TLSv1.3",
       authorized: true,

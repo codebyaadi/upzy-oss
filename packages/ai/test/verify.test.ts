@@ -64,9 +64,22 @@ describe("key verification", () => {
     expect(await verifyWith(boom, "groq", "k")).toMatchObject({ ok: false, reason: "unreachable" });
   });
 
-  test("OpenRouter is checked against its key endpoint and reports no model list", async () => {
+  test("OpenRouter is checked against its key endpoint, and its models come from the public list", async () => {
     const o = seen();
-    expect(await verifyWith(o.f, "openrouter", "sk-or-1")).toEqual({ ok: true, models: [] });
+    expect(await verifyWith(o.f, "openrouter", "sk-or-1")).toEqual({
+      ok: true,
+      models: ["m1", "m2"],
+    });
     expect(o.calls[0]!.url).toContain("/api/v1/key");
+    expect(o.calls[1]!.url).toContain("/api/v1/models");
+  });
+
+  test("OpenRouter's model list failing does not fail a good key", async () => {
+    let n = 0;
+    const f = (async () =>
+      ++n === 1
+        ? new Response("{}", { status: 200 })
+        : new Response("", { status: 500 })) as unknown as typeof fetch;
+    expect(await verifyWith(f, "openrouter", "sk-or-1")).toEqual({ ok: true, models: [] });
   });
 });

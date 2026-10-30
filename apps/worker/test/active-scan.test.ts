@@ -25,9 +25,9 @@ describe("checksFor", () => {
   test("a verified asset gets every check with the built-in engine", () => {
     expect(checksFor(true, "builtin")).toBe(ALL_CHECKS);
   });
-  test("with nuclei, only the port checks stay in the worker", () => {
+  test("with nuclei, only the port and service checks stay in the worker", () => {
     const active = checksFor(true, "nuclei").filter((c) => ACTIVE_CHECKS.includes(c));
     expect(active.length).toBeGreaterThan(0);
-    expect(active.every((c) => c.family === "ports")).toBe(true);
+    expect(active.every((c) => ["ports", "services"].includes(c.family))).toBe(true);
   });
 });

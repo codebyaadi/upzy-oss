@@ -12,7 +12,7 @@ const steps = [
   {
     n: "03",
     title: "Get the why, not just the alert",
-    body: "Every incident and finding arrives with a plain-English explanation and a suggested fix.",
+    body: "Every finding arrives with the fix for your stack. Connect your own AI key and incidents and findings get a plain-English explanation too.",
   },
 ];
 

@@ -13,7 +13,53 @@ permissions:
   contents: read
 
 jobs:
+  # Minutes are the cost of CI, so each job runs only when files it checks have changed. A skipped job counts as passed
+  # for branch protection. Commits that touch only docs run nothing (the formatter checks Markdown too, so run
+  # `bun run format` before committing docs).
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+      db: ${{ steps.filter.outputs.db }}
+      agent: ${{ steps.filter.outputs.agent }}
+      scan: ${{ steps.filter.outputs.scan }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            app:
+              - 'apps/**'
+              - 'packages/**'
+              - 'schemas/**'
+              - 'docker/**'
+              - 'package.json'
+              - 'bun.lock'
+              - 'turbo.json'
+              - '.oxfmtrc.json'
+              - '.github/workflows/ci.yml'
+            db:
+              - 'packages/db/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.github/workflows/ci.yml'
+            agent:
+              - 'agent/**'
+              - '.github/workflows/ci.yml'
+            scan:
+              - 'scan/**'
+              - 'packages/security/src/checks/active.ts'
+              - 'bun.lock'
+              - '.github/workflows/ci.yml'
+
   checks:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -35,6 +81,11 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.2
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
       - run: bun install --frozen-lockfile
       - run: bun run format:check
       - run: bun run lint
@@ -51,6 +102,8 @@ jobs:
 
   # Migrations must also work on a database that already has data, not just an empty one.
   migrations-idempotent:
+    needs: changes
+    if: needs.changes.outputs.db == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     services:
@@ -72,6 +125,11 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.2
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
       - run: bun install --frozen-lockfile
       - run: bun run db:migrate
       - name: Re-running migrations is a no-op
@@ -82,6 +140,8 @@ jobs:
 
   # The probe agent is a separate Go program (agent/): format, vet, test, and make sure it still cross-compiles.
   agent:
+    needs: changes
+    if: needs.changes.outputs.agent == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -92,6 +152,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: agent/go.mod
+          # Caches the module download and the build cache, keyed on go.sum.
+          cache-dependency-path: agent/go.sum
       - name: Formatted
         run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
       - run: go vet ./...
@@ -105,17 +167,26 @@ jobs:
   # The active scanner (scan/) embeds nuclei. Besides the usual checks, its dependencies are checked against the public
   # checksum database, and the templates generated from the built-in exposed-path list must be up to date.
   scan:
+    needs: changes
+    if: needs.changes.outputs.scan == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
       - run: bun install --frozen-lockfile
       - name: Generated templates are current
         run: bun scan/scripts/gen-templates.ts --check
       - uses: actions/setup-go@v5
         with:
           go-version-file: scan/go.mod
+          # Compiling nuclei takes most of this job's time; the build cache makes later runs a few minutes.
+          cache-dependency-path: scan/go.sum
       - name: Formatted
         working-directory: scan
         run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)

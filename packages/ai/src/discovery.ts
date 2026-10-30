@@ -39,6 +39,9 @@ export function chooseLiveModel(
   const pick = (id: string | null) => (id ? { provider, model: id } : null);
   switch (provider) {
     case "google": {
+      // The "-latest" aliases are the stable choice: a numbered preview can be overloaded or closed to new keys.
+      const alias = tier === "fast" ? "gemini-flash-lite-latest" : "gemini-flash-latest";
+      if (ids.includes(alias)) return pick(alias);
       const lite = newest(ids, /^gemini-(\d+(?:\.\d+)?)-flash-lite$/);
       const flash = newest(ids, /^gemini-(\d+(?:\.\d+)?)-flash$/);
       const pro = newest(ids, /^gemini-(\d+(?:\.\d+)?)-pro$/);

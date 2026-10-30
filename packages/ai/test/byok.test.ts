@@ -24,6 +24,15 @@ describe("price catalog", () => {
     expect(findModel({ provider: "openai", model: "brand-new-model" })).toBeUndefined();
   });
 
+  test("the free-models router is selectable, costs nothing, and is never picked for Automatic", async () => {
+    const { tierModel } = await import("../src/providers");
+    const free = { provider: "openrouter", model: "openrouter/free" } as const;
+    expect(findModel(free)?.free).toBe(true);
+    expect(costMicros(free, 5000, 5000)).toBe(0);
+    expect(tierModel("openrouter", "smart")?.model).not.toBe("openrouter/free");
+    expect(tierModel("openrouter", "fast")?.model).not.toBe("openrouter/free");
+  });
+
   test("model resolution: picked wins, otherwise follow the other role or the keyed provider", async () => {
     const { resolveModel } = await import("../src/providers");
     const none = { fast: null, smart: null };
@@ -42,6 +51,15 @@ describe("price catalog", () => {
       model: "gpt-4.1-nano",
     });
     expect(resolveModel({ fast: null, smart: picked }, "smart", [])).toEqual(picked);
+    // A provider that only has models in one tier (OpenRouter) serves both roles from it.
+    expect(resolveModel(none, "fast", ["openrouter"])).toEqual({
+      provider: "openrouter",
+      model: "meta-llama/llama-3.3-70b-instruct",
+    });
+    expect(resolveModel(none, "smart", ["openrouter"])).toEqual({
+      provider: "openrouter",
+      model: "meta-llama/llama-3.3-70b-instruct",
+    });
     // A provider with no model of that tier in the catalog falls back to the model that was picked.
     const custom = { provider: "openai", model: "my-ft" } as const;
     expect(resolveModel({ fast: null, smart: custom }, "fast", [])).toEqual({

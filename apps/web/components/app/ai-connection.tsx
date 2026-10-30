@@ -7,6 +7,7 @@ import { toast } from "@upzy/ui/components/sonner";
 import { useState } from "react";
 
 import { useConfirm } from "@/components/app/confirm";
+import { ProviderMark } from "@/components/app/provider-mark";
 import { SelectField } from "@/components/app/select-field";
 import { Field } from "@/components/app/ui";
 import { api } from "@/lib/api";
@@ -21,6 +22,7 @@ interface CatalogModel {
   inputPerM: number;
   outputPerM: number;
   tier: "fast" | "smart";
+  free?: boolean;
 }
 export interface Connection {
   fastModel: string | null;
@@ -37,9 +39,11 @@ export interface Connection {
   };
 }
 
-const price = (n: number) => (n === 0 ? "free" : `$${n}`);
+const NOT_CHAT =
+  /embed|whisper|tts|dall-e|moderation|image|audio|realtime|transcribe|guard|imagen|veo/i;
+const price = (n: number) => `$${n}`;
 const optionLabel = (m: CatalogModel) =>
-  `${m.label} · ${price(m.inputPerM)} in / ${price(m.outputPerM)} out per 1M`;
+  m.free ? "free" : `${price(m.inputPerM)} in / ${price(m.outputPerM)} out per 1M`;
 
 /** The organization's own provider keys and model choices: the only way AI gets a key. */
 export function AiConnection({ data, onChange }: { data: Connection; onChange: () => unknown }) {
@@ -57,28 +61,34 @@ export function AiConnection({ data, onChange }: { data: Connection; onChange: (
     data.catalog.providers.find((p) => p.id === id)?.label ?? id;
   const liveFor = (provider: string) => live.data?.[provider];
   const known = new Set(data.catalog.models.map((m) => `${m.provider}:${m.id}`));
+  const connected = new Set(data.credentials.map((c) => c.provider));
   const options = [
     { value: "", label: "Automatic (recommended)" },
-    // Catalog models, minus the ones a connected key can't use.
+    // Only models of providers that have a saved key, and of those only the ones the key can use.
     ...data.catalog.models
       .filter((m) => {
+        if (!connected.has(m.provider)) return false;
         const l = liveFor(m.provider);
         return !l || l.length === 0 || l.includes(m.id);
       })
       .map((m) => ({
         value: `${m.provider}:${m.id}`,
-        label: `${providerLabel(m.provider)} · ${optionLabel(m)}`,
+        label: `${m.label} · ${optionLabel(m)}`,
+        icon: <ProviderMark provider={m.provider} />,
       })),
-    // Models the key can use that we don't have a price for.
-    ...Object.entries(live.data ?? {}).flatMap(([provider, ids]) =>
-      ids
-        .filter((id) => !known.has(`${provider}:${id}`))
-        .slice(0, 40)
-        .map((id) => ({
-          value: `${provider}:${id}`,
-          label: `${providerLabel(provider)} · ${id} (price unknown)`,
-        })),
-    ),
+    // Chat models the key can use that we don't have a price for (not embeddings, speech or image models).
+    ...Object.entries(live.data ?? {})
+      .filter(([provider]) => connected.has(provider))
+      .flatMap(([provider, ids]) =>
+        ids
+          .filter((id) => !known.has(`${provider}:${id}`) && !NOT_CHAT.test(id))
+          .slice(0, 40)
+          .map((id) => ({
+            value: `${provider}:${id}`,
+            label: `${id} (price unknown)`,
+            icon: <ProviderMark provider={provider} />,
+          })),
+      ),
   ];
   // A custom id typed earlier must stay selectable, otherwise the picker would show a blank value.
   const withCurrent = (current: string) =>
@@ -171,6 +181,7 @@ export function AiConnection({ data, onChange }: { data: Connection; onChange: (
               <li key={p.id} className="px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-sm">
+                    <ProviderMark provider={p.id} />
                     <span className="font-semibold">{p.label}</span>
                     {saved ? <Badge>Connected</Badge> : <Badge variant="outline">No key</Badge>}
                     {saved && (
@@ -257,8 +268,14 @@ export function AiConnection({ data, onChange }: { data: Connection; onChange: (
           </h3>
           <p className="text-muted-foreground text-sm">
             Prices are list prices as of {data.catalog.pricesAsOf}; your provider&rsquo;s bill is
-            the source of truth. Pick a model from any provider you have a key for.
+            the source of truth. Only models your saved keys can use are listed.
           </p>
+          {connected.size === 0 && (
+            <p className="text-muted-foreground mt-2 rounded-xl border border-dashed p-3 text-sm">
+              Add an API key above to choose a model. OpenRouter&rsquo;s &ldquo;Free models&rdquo;
+              option costs nothing, but free models can log what you send and are rate limited.
+            </p>
+          )}
         </div>
         <Field
           label="Main model"
@@ -293,13 +310,21 @@ export function AiConnection({ data, onChange }: { data: Connection; onChange: (
           />
         </Field>
         <div className="flex items-center justify-between gap-3">
-          <p className="text-muted-foreground text-xs">
-            Running now: <span className="font-mono">{data.active.smart.model}</span> (main),{" "}
-            <span className="font-mono">{data.active.fast.model}</span> (quick)
-            {!(data.active.smart.ready && data.active.fast.ready) && (
-              <span className="text-destructive"> · a key is missing</span>
-            )}
-          </p>
+          <div className="text-muted-foreground flex flex-col gap-1 text-xs">
+            <span className="font-medium">Running now</span>
+            {(
+              [
+                ["Main", data.active.smart],
+                ["Quick", data.active.fast],
+              ] as const
+            ).map(([role, a]) => (
+              <span key={role} className="flex items-center gap-2">
+                {a.model && <ProviderMark provider={a.model.split(":")[0]!} className="size-5" />}
+                <span className="font-mono">{a.model ?? "not set"}</span> ({role})
+                {!a.ready && <span className="text-destructive">· a key is missing</span>}
+              </span>
+            ))}
+          </div>
           <Button loading={isPending("models")} disabled={!dirty} onClick={saveModels}>
             Save models
           </Button>

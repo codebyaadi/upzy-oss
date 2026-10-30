@@ -9,7 +9,12 @@ export const legal = () => ({
   email: process.env.CONTACT_EMAIL?.trim() || null,
   /** Optional, e.g. "India". Without it the terms don't name a governing law. */
   jurisdiction: process.env.LEGAL_JURISDICTION?.trim() || null,
-  updated: "23 October 2026",
+  /**
+   * EARLY_ACCESS=true: every feature is free and unlimited, nothing can be bought yet. The pricing page and the Terms
+   * say so instead of offering plans that cannot be paid for.
+   */
+  earlyAccess: process.env.EARLY_ACCESS?.trim().toLowerCase() === "true",
+  updated: "30 October 2026",
 });
 
 export const DOCS = [

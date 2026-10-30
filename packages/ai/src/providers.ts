@@ -16,7 +16,11 @@ export const defaultModelFactory: ModelFactory = (spec, apiKey) => {
     case "groq":
       return createGroq({ apiKey })(spec.model);
     case "openrouter":
-      return createOpenRouter({ apiKey }).chat(spec.model);
+      // Our requests need structured output and tools: only route to models that support both, so the free router
+      // can't hand them to a model that ignores the schema.
+      return createOpenRouter({ apiKey }).chat(spec.model, {
+        provider: { require_parameters: true },
+      });
     case "openai":
       return createOpenAI({ apiKey })(spec.model);
     case "anthropic":
@@ -28,7 +32,7 @@ export const defaultModelFactory: ModelFactory = (spec, apiKey) => {
 
 /** The catalog's model of a tier for a provider, e.g. Groq's quick model. */
 export const tierModel = (provider: string, tier: ModelRole): ModelSpec | null => {
-  const m = MODEL_CATALOG.find((c) => c.provider === provider && c.tier === tier);
+  const m = MODEL_CATALOG.find((c) => c.provider === provider && c.tier === tier && !c.free);
   return m ? { provider: m.provider, model: m.id } : null;
 };
 
@@ -47,5 +51,12 @@ export function resolveModel(
   const other = models[role === "fast" ? "smart" : "fast"];
   const provider = other?.provider ?? keyedProviders[0];
   if (!provider) return null;
-  return tierModel(provider, role) ?? other ?? null;
+  // A provider with models in only one tier (OpenRouter has no fast one) uses the other tier for this role,
+  // so connecting that single key is enough to turn AI on.
+  return (
+    tierModel(provider, role) ??
+    tierModel(provider, role === "fast" ? "smart" : "fast") ??
+    other ??
+    null
+  );
 }

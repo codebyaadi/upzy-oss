@@ -44,9 +44,9 @@ export const reputationCheck: Check = {
       checkKey: "reputation.flagged_unsafe",
       subject: t,
       severity: "critical",
-      title: `Google Safe Browsing flags this site for ${THREATS[t]}`,
+      title: `Google Safe Browsing lists this site as possibly containing ${THREATS[t]}`,
       description:
-        "Chrome, Firefox and Safari show a full-page red warning to visitors of flagged sites, and search engines may drop them. It often means the site was hacked.",
+        "Chrome, Firefox and Safari show a full-page red warning to visitors of sites Google lists, and search engines may drop them. It often means the site was hacked, but a listing is not certain: Google may have listed it in error, or the problem may already be fixed. Advisory provided by Google. Google cannot guarantee that its information is comprehensive and error-free: some risky sites may not be identified, and some safe sites may be identified in error.",
       remediation:
         "Find and remove what was injected (check recently changed files, plugins and admin accounts, and change passwords), then request a review in Google Search Console under Security issues.",
       evidence: { threatType: t },

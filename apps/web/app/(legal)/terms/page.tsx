@@ -116,6 +116,14 @@ export default function Terms() {
 
       <Section title="8. Plans and payment">
         <UL>
+          {legal().earlyAccess && (
+            <li>
+              <strong>Early access.</strong> While Upzy is in early access every feature is free and
+              unlimited, and no payment is taken. We will announce paid plans in advance, and you
+              will not be charged unless you choose one. The paragraphs below describe how paid
+              plans will work once they open.
+            </li>
+          )}
           <li>
             Upzy has a free plan and paid plans, listed with their limits on the{" "}
             <a href="/pricing" className="underline underline-offset-4">

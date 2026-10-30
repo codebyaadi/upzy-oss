@@ -38,6 +38,7 @@ const deps = (over: Partial<Deps> = {}): Deps => ({
   tls: async () => tls,
   tlsLegacy: async () => false,
   tcpOpen: async () => false,
+  grabBanner: async () => null,
   vuln: { http: async () => ({}), cache: memoryCache() },
   ...over,
 });
@@ -294,6 +295,11 @@ describe("open ports", () => {
     const r = await only(portsCheck, deps({ tcpOpen: async (_h, p) => p === 6379 || p === 3306 }));
     const bySubject = Object.fromEntries(r.findings.map((f) => [f.subject, f.severity]));
     expect(bySubject).toEqual({ "3306": "high", "6379": "critical" });
+  });
+
+  test("a network that accepts every port is not reported as exposing databases", async () => {
+    const r = await only(portsCheck, deps({ tcpOpen: async () => true }));
+    expect(r.findings).toEqual([]);
   });
 
   test("nothing open is clean, and web and SSH ports are never flagged", async () => {

@@ -16,6 +16,7 @@ export { fingerprint } from "./fingerprint";
 export { extractHosts, mergePageState, siteOf, type PageState, type PageHosts } from "./page-state";
 export { parsePolicy, mxMatches } from "./checks/mta-sts";
 export { componentFinding } from "./checks/cve";
+export { parseBanner, serviceFinding, SERVICE_PROBES, servicesCheck } from "./checks/services";
 export { riskScore } from "./score";
 export {
   newVerificationToken,

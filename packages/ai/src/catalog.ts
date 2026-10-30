@@ -41,6 +41,8 @@ export interface CatalogModel {
   outputPerM: number;
   /** Which tasks it is a sensible default for. */
   tier: "fast" | "smart";
+  /** Costs nothing. Offered as a choice, never picked for "Automatic": free tiers log prompts and are rate limited. */
+  free?: boolean;
 }
 
 /**
@@ -131,37 +133,53 @@ export const MODEL_CATALOG: CatalogModel[] = [
     outputPerM: 15,
     tier: "smart",
   },
+  // Google closes each Gemini generation to new keys within months (2.5 Flash and Flash-Lite already answer 404 to
+  // new accounts), so these are its "-latest" aliases, which always point at the current model. Prices are those
+  // of the generation we last checked.
   {
     provider: "google",
-    id: "gemini-2.5-flash-lite",
-    label: "Gemini 2.5 Flash-Lite",
+    id: "gemini-flash-lite-latest",
+    label: "Gemini Flash-Lite (latest)",
     inputPerM: 0.1,
     outputPerM: 0.4,
     tier: "fast",
   },
   {
     provider: "google",
-    id: "gemini-2.5-flash",
-    label: "Gemini 2.5 Flash",
+    id: "gemini-flash-latest",
+    label: "Gemini Flash (latest)",
     inputPerM: 0.3,
     outputPerM: 2.5,
     tier: "smart",
   },
   {
     provider: "google",
-    id: "gemini-2.5-pro",
-    label: "Gemini 2.5 Pro",
+    id: "gemini-pro-latest",
+    label: "Gemini Pro (latest)",
     inputPerM: 1.25,
     outputPerM: 10,
     tier: "smart",
   },
   {
     provider: "openrouter",
-    id: "meta-llama/llama-3.3-70b-instruct:free",
-    label: "Llama 3.3 70B (free)",
+    // OpenRouter retired the free variant of this model (HTTP 404), and its free list changes weekly, so the
+    // default is the paid one: about a tenth of a dollar per million input tokens.
+    id: "meta-llama/llama-3.3-70b-instruct",
+    label: "Llama 3.3 70B via OpenRouter",
+    inputPerM: 0.1,
+    outputPerM: 0.32,
+    tier: "smart",
+  },
+  {
+    provider: "openrouter",
+    // Individual free models come and go (the free Llama 3.3 was retired), so this is OpenRouter's own router: it
+    // sends each request to whichever free model is available and supports structured output.
+    id: "openrouter/free",
+    label: "Free models (OpenRouter router)",
     inputPerM: 0,
     outputPerM: 0,
     tier: "smart",
+    free: true,
   },
   {
     provider: "openrouter",

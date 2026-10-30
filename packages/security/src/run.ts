@@ -9,6 +9,7 @@ import { mtaStsCheck } from "./checks/mta-sts";
 import { pageChangeCheck } from "./checks/page-change";
 import { registrationCheck, dnssecCheck } from "./checks/registration";
 import { reputationCheck } from "./checks/reputation";
+import { servicesCheck } from "./checks/services";
 import { tlsCheck, tlsLegacyCheck } from "./checks/tls";
 import { defaultDeps } from "./deps";
 import { extractHosts, mergePageState, type PageState } from "./page-state";
@@ -33,7 +34,7 @@ export const PASSIVE_CHECKS: Check[] = [
 ];
 
 /** Checks that probe paths and ports. They run only for assets whose ownership has been verified. */
-export const ACTIVE_CHECKS: Check[] = [exposedPathsCheck, portsCheck];
+export const ACTIVE_CHECKS: Check[] = [exposedPathsCheck, portsCheck, servicesCheck];
 
 export const ALL_CHECKS: Check[] = [...PASSIVE_CHECKS, ...ACTIVE_CHECKS];
 

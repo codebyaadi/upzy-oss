@@ -27,8 +27,9 @@ export function Hero() {
           Know it&rsquo;s down before your customers do.
         </h1>
         <p className="text-muted-foreground mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-pretty">
-          Upzy watches your sites and APIs, scans what you expose to the internet, and uses an AI
-          copilot to explain every incident in plain English.
+          Upzy watches your sites and APIs, scans what you expose to the internet, and gives you the
+          fix for every finding. Connect your own AI key and it explains incidents in plain English
+          too.
         </p>
         <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <PrimaryCta size="lg">

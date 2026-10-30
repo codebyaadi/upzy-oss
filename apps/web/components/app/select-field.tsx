@@ -8,10 +8,13 @@ import {
   SelectValue,
 } from "@upzy/ui/components/select";
 import { cn } from "@upzy/ui/lib/utils";
+import type { ReactNode } from "react";
 
 export interface Option<T extends string = string> {
   value: T;
   label: string;
+  /** Shown before the label in the list. */
+  icon?: ReactNode;
 }
 
 /** A labelled single-choice picker on top of the shadcn Select. */
@@ -52,7 +55,14 @@ export function SelectField<T extends string>({
       <SelectContent>
         {options.map((o) => (
           <SelectItem key={o.value} value={o.value}>
-            {o.label}
+            {o.icon ? (
+              <span className="flex items-center gap-2">
+                {o.icon}
+                {o.label}
+              </span>
+            ) : (
+              o.label
+            )}
           </SelectItem>
         ))}
       </SelectContent>

@@ -16,7 +16,7 @@ const sora = Sora({
 
 const title = "Upzy: uptime monitoring and attack-surface security";
 const description =
-  "Know when your sites go down and what's exposed before attackers do. Uptime monitoring, public status pages, security checks and an AI copilot for small teams. Free to start, open source.";
+  "Know when your sites go down and what's exposed before attackers do. Uptime monitoring, public status pages, security checks and optional AI explanations for small teams. Free during early access, open source.";
 
 export const metadata: Metadata = {
   // Absolute URLs for link previews and canonical addresses. Set NEXT_PUBLIC_SITE_URL at build time (docker/Dockerfile.web).

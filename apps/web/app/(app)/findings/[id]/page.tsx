@@ -224,6 +224,10 @@ export default function FindingDetailPage() {
             EPSS is the estimated probability of exploitation in the next 30 days. KEV is
             CISA&rsquo;s catalogue of vulnerabilities known to be exploited.
           </p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            This product uses data from the NVD API but is not endorsed or certified by the NVD.
+            EPSS scores are published by FIRST; advisories also come from OSV.
+          </p>
         </Panel>
       )}
 

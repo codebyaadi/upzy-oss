@@ -6,6 +6,7 @@ on:
   pull_request:
   schedule:
     - cron: "17 3 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -37,7 +38,10 @@ jobs:
 
   # Static analysis. Results are kept as a downloadable report and fail the job on error-level findings; uploading
   # to the Security tab needs GitHub Advanced Security on private repositories.
+  # The slow one (several minutes), so it runs on pull requests, weekly and by hand, not on every push to main.
+  # Secret scanning and the dependency scan above are cheap and still run on every push.
   codeql:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -102,6 +102,30 @@ describe("copilot chat", () => {
     });
   });
 
+  test("an answer that looked nothing up is asked again, once, and the second try can use tools", async () => {
+    const calls: string[] = [];
+    const { gateway } = setup([
+      { answer: { answer: "I'll look that up.", citations: [] } },
+      { tool: "listMonitors", input: {} },
+      {
+        answer: {
+          answer: "You have one monitor: API.",
+          citations: [{ type: "monitor", id: "m1" }],
+        },
+      },
+    ]);
+    const r = await ask(gateway, calls);
+    expect(r.data.answer).toBe("You have one monitor: API.");
+    expect(calls).toHaveLength(1);
+  });
+
+  test("a model that never uses a tool is asked only twice", async () => {
+    const { gateway, seen } = setup([{ answer: { answer: "I'll look that up.", citations: [] } }]);
+    const r = await ask(gateway);
+    expect(r.data.answer).toBe("I'll look that up.");
+    expect(seen).toHaveLength(2);
+  });
+
   test("tool results reach the model as tool output, after the user's question", async () => {
     const { gateway, seen } = setup([
       { tool: "listMonitors", input: {} },

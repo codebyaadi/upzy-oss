@@ -43,6 +43,7 @@ const deps = (over: Partial<Deps> = {}): Deps => ({
   tls: async () => goodTls,
   tlsLegacy: async () => false,
   tcpOpen: async () => false,
+  grabBanner: async () => null,
   vuln: { http: async () => ({}), cache: memoryCache() },
   ...over,
 });

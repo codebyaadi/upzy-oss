@@ -56,8 +56,11 @@ export default function AcceptableUse() {
             <strong>Deeper checks</strong> run only on assets whose ownership you have proved by DNS
             record or file. They request a short list of well-known paths that should never be
             public (such as /.env and /.git/HEAD) and test whether about a dozen risky service ports
-            (databases, remote desktop, Telnet) accept a connection. They connect and read nothing
-            further, and they never save what a file contained, only that it was reachable.
+            (databases, remote desktop, Telnet) accept a connection. On a few service ports (SSH,
+            FTP, mail, MySQL, Redis, Memcached) they also read the greeting the service sends, and
+            for Redis and Memcached send one read-only command, to learn which software and version
+            is running so that its known vulnerabilities can be looked up. They never try to log in,
+            and they never save what a file contained, only that it was reachable.
           </li>
           <li>
             <strong>Subdomain discovery</strong> reads public certificate transparency logs. Hosts

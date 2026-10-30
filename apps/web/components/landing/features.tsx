@@ -8,6 +8,9 @@ import {
   Layers01Icon,
   UserGroupIcon,
   Wrench01Icon,
+  CheckmarkCircle02Icon,
+  Radar01Icon,
+  LockPasswordIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { Badge } from "@upzy/ui/components/badge";
@@ -17,7 +20,13 @@ const features: { icon: IconSvgElement; title: string; body: string; live?: bool
     icon: Activity01Icon,
     title: "Uptime monitoring",
     live: true,
-    body: "HTTP, TCP, DNS and SSL checks with keyword and status assertions. Declared down only after repeated failures, so blips don't page you.",
+    body: "HTTP, TCP, DNS and SSL checks with keyword and status assertions, heartbeat monitors for cron jobs, and multi-step API checks. Declared down only after repeated failures, so blips don't page you.",
+  },
+  {
+    icon: CheckmarkCircle02Icon,
+    title: "A grade and a fix for every finding",
+    live: true,
+    body: "An A to F health score for each domain, and for every finding the change to make for your stack (nginx, Apache, Caddy, Cloudflare, Vercel and more). Press Verify fix and it re-checks right away.",
   },
   {
     icon: ShieldKeyIcon,
@@ -60,6 +69,18 @@ const features: { icon: IconSvgElement; title: string; body: string; live?: bool
     title: "Built for agencies",
     live: true,
     body: "A workspace per client, one screen for all of them, access limited to a client's own workspace, their logo on the status page, and scheduled reports emailed to them.",
+  },
+  {
+    icon: Radar01Icon,
+    title: "Deeper checks on domains you own",
+    live: true,
+    body: "After you prove ownership, Upzy looks for exposed files like .env, risky open database ports, and the software versions services announce, matched to known vulnerabilities. You get an alert within hours when a newly exploited CVE affects what you run.",
+  },
+  {
+    icon: LockPasswordIcon,
+    title: "Secure by default",
+    live: true,
+    body: "Two-factor sign-in with an option to require it for everyone, roles from viewer to owner, an audit log of every change, encrypted secrets, and no analytics or advertising cookies. Open source, and you can run it yourself.",
   },
   {
     icon: Calendar03Icon,

@@ -1,11 +1,14 @@
 name: AI eval
 
 # Runs the AI safety/quality scenarios (prompt injection, secret leakage, invented numbers) against the real
-# providers. Nightly rather than per commit: free tiers are rate limited and models drift. Skipped when the
-# repository has no AI_EVAL_API_KEY secret.
+# providers. Weekly, and when the AI package changes, rather than per commit: free tiers are rate limited and an
+# unchanged eval proves nothing new. Skipped when the repository has no AI_EVAL_API_KEY secret.
 on:
   schedule:
-    - cron: "41 2 * * *"
+    - cron: "41 2 * * 1"
+  push:
+    branches: [main]
+    paths: ["packages/ai/**"]
   workflow_dispatch:
 
 permissions:

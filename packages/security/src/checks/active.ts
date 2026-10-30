@@ -271,12 +271,19 @@ export const RISKY_PORTS: RiskyPort[] = [
   },
 ];
 
+/** Ports no real service uses. */
+const CANARY_PORTS = [47123, 61999];
+
 export const portsCheck: Check = {
   family: "ports",
   active: true,
   appliesTo: ["domain", "subdomain", "url"],
   timeoutMs: 30_000,
   async run({ host, deps }) {
+    // Some networks (shared hosting fronts, transparent proxies, captive firewalls) accept a connection on every
+    // port. Two ports nothing listens on settle it: if either answers, "open" means nothing here, so say nothing.
+    const canaries = await Promise.all(CANARY_PORTS.map((p) => deps.tcpOpen(host, p)));
+    if (canaries.some(Boolean)) return [];
     const open = await Promise.all(
       RISKY_PORTS.map(async (p) => ((await deps.tcpOpen(host, p.port)) ? p : null)),
     );

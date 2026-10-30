@@ -49,3 +49,9 @@ apps/web/AGENTS.md
 /agent/upzy-agent
 /agent/upzy-agent.exe
 /agent/dist/
+
+# local launch-video output
+brag-output/
+
+# local tool configuration
+.claude/

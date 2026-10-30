@@ -23,6 +23,9 @@ jobs:
       tag: ${{ steps.meta.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Release tags and their history, to tell whether the browser image changed since the last release.
+          fetch-depth: 0
       - id: meta
         run: |
           echo "repo=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
@@ -33,6 +36,23 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # The browser image is only the Playwright server (no application code), so it changes rarely. When its
+      # Dockerfile is the same as at the previous release, give the existing image the new tags instead of rebuilding.
+      # Any doubt (no previous release, image missing) falls through to a normal build.
+      - name: Browser image unchanged since the last release?
+        id: browser
+        run: |
+          prev=$(git describe --tags --abbrev=0 --match 'v*' "${GITHUB_SHA}^" 2>/dev/null || true)
+          if [ -n "$prev" ] && git diff --quiet "$prev" "$GITHUB_SHA" -- docker/Dockerfile.browser; then
+            old="ghcr.io/${{ steps.meta.outputs.repo }}-browser:$(git rev-parse "$prev^{commit}" | cut -c1-12)"
+            if docker buildx imagetools inspect "$old" >/dev/null 2>&1; then
+              docker buildx imagetools create \
+                -t "ghcr.io/${{ steps.meta.outputs.repo }}-browser:${{ steps.meta.outputs.tag }}" \
+                -t "ghcr.io/${{ steps.meta.outputs.repo }}-browser:latest" "$old"
+              echo "reused=true" >> "$GITHUB_OUTPUT"
+              echo "Reused $old"
+            fi
+          fi
       - name: Server image (API, worker, migrations)
         uses: docker/build-push-action@v7
         with:
@@ -45,6 +65,7 @@ jobs:
           cache-from: type=gha,scope=server
           cache-to: type=gha,scope=server,mode=max
       - name: Browser image (optional, for browser monitors)
+        if: steps.browser.outputs.reused != 'true'
         uses: docker/build-push-action@v7
         with:
           context: .

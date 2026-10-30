@@ -28,6 +28,10 @@ describe("choosing a model from what a key can use", () => {
   });
 
   test("a retired generation isn't chosen when it is the only one left to match nothing sensible", () => {
+    // The "-latest" aliases win over numbered models when the key lists them.
+    const withAlias = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-flash-lite-latest"];
+    expect(chooseLiveModel("google", "smart", withAlias)?.model).toBe("gemini-flash-latest");
+    expect(chooseLiveModel("google", "fast", withAlias)?.model).toBe("gemini-flash-lite-latest");
     expect(chooseLiveModel("google", "smart", ["gemini-3.8-pro"])).toEqual({
       provider: "google",
       model: "gemini-3.8-pro",
@@ -138,11 +142,11 @@ describe("Automatic follows the live list; picks are respected", () => {
     const gateway = createGateway({
       config: CONFIG,
       stores: store.stores,
-      modelFactory: factoryFor({ "google:gemini-2.5-flash": m.model }),
+      modelFactory: factoryFor({ "google:gemini-flash-latest": m.model }),
       discovery: createModelDiscovery(async () => {
         throw new Error("offline");
       }),
     });
-    expect((await gateway.generateStructured(req)).model).toBe("gemini-2.5-flash");
+    expect((await gateway.generateStructured(req)).model).toBe("gemini-flash-latest");
   });
 });

@@ -158,6 +158,8 @@ services:
       LEGAL_ENTITY: ${LEGAL_ENTITY:-}
       CONTACT_EMAIL: ${CONTACT_EMAIL:-}
       LEGAL_JURISDICTION: ${LEGAL_JURISDICTION:-}
+      # true while everything is free and nothing can be bought: the pricing page and Terms say so.
+      EARLY_ACCESS: ${EARLY_ACCESS:-}
     healthcheck:
       test:
         [

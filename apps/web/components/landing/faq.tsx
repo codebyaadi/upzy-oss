@@ -9,7 +9,7 @@ export const faqItems = [
   },
   {
     q: "Is Upzy free?",
-    a: "There is a free plan with 10 monitors, one status page and one scanned domain. Paid plans start at $15 a month, and every new account gets a 14-day Pro trial with no card. Team members are unlimited on every plan.",
+    a: "Yes. Upzy is in early access: every feature is free, with no plan limits, and nothing can be bought yet. Paid plans, from $15 a month, will open later. We will announce them in advance, and you will not be charged unless you choose one. Team members are unlimited.",
   },
   {
     q: "Is Upzy open source? Can I self-host it?",

@@ -26,7 +26,10 @@ export function activeEngine(env: Record<string, string | undefined> = process.e
 export function checksFor(verified: boolean, engine: ActiveEngine): Check[] {
   if (!verified) return PASSIVE_CHECKS;
   if (engine === "builtin") return ALL_CHECKS;
-  return [...PASSIVE_CHECKS, ...ACTIVE_CHECKS.filter((c) => c.family === "ports")];
+  return [
+    ...PASSIVE_CHECKS,
+    ...ACTIVE_CHECKS.filter((c) => c.family === "ports" || c.family === "services"),
+  ];
 }
 
 /** Queues an active scan for the scanner. Only a verified asset is ever queued; the API checks again when handing it out. */

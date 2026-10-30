@@ -87,8 +87,14 @@ export async function verifyWith(
         message: `The provider answered with an error (${res.status}). Try again.`,
       };
     const body = await res.json().catch(() => null);
-    if (provider === "google" && !apiKey.startsWith("AIza")) {
-      // It worked, which is fine: just don't nag.
+    if (provider === "openrouter") {
+      // The key check lists no models; the public catalog does, so retired ones can be left out of the pickers.
+      const list = await doFetch("https://openrouter.ai/api/v1/models", {
+        signal: AbortSignal.timeout(15_000),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+      return { ok: true, models: ids(list) };
     }
     return { ok: true, models: e.models(body) };
   } catch {
