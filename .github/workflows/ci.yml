@@ -149,7 +149,7 @@ jobs:
         working-directory: agent
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: agent/go.mod
           # Caches the module download and the build cache, keyed on go.sum.
@@ -182,7 +182,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Generated templates are current
         run: bun scan/scripts/gen-templates.ts --check
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: scan/go.mod
           # Compiling nuclei takes most of this job's time; the build cache makes later runs a few minutes.
