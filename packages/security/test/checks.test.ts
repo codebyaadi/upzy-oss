@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { generateKeyPairSync } from "node:crypto";
 
 import { BlockedTargetError } from "@upzy/probes";
 
@@ -206,6 +207,16 @@ describe("tls", () => {
   });
 });
 
+/** A public key as it appears after p= in a DKIM record: base64 of the DER SubjectPublicKeyInfo. */
+const rsaP = (bits: number) =>
+  generateKeyPairSync("rsa", { modulusLength: bits })
+    .publicKey.export({ type: "spki", format: "der" })
+    .toString("base64");
+const KEY_512 = rsaP(512);
+const KEY_1024 = rsaP(1024);
+const KEY_2048 = rsaP(2048);
+const dkim = (p: string, extra = "") => `v=DKIM1; k=rsa; ${extra}p=${p}`;
+
 describe("email auth", () => {
   const mx = async () => [{ exchange: "mx.example.com", priority: 10 }];
   const txt = (map: Record<string, string[]>) => async (h: string) =>
@@ -222,13 +233,14 @@ describe("email auth", () => {
   test("no SPF, no DMARC", async () =>
     expect(
       keys(await run({})).filter((k) => k.startsWith("email.") && !/mta_sts|tls_rpt/.test(k)),
-    ).toEqual(["email.dmarc_missing", "email.spf_missing"]));
+    ).toEqual(["email.dkim_not_found", "email.dmarc_missing", "email.spf_missing"]));
   test("strict SPF + enforced DMARC is clean", async () =>
     expect(
       keys(
         await run({
           "example.com": ["v=spf1 include:_spf.x.com -all"],
-          "_dmarc.example.com": ["v=DMARC1; p=reject"],
+          "_dmarc.example.com": ["v=DMARC1; p=reject; rua=mailto:dmarc@example.com"],
+          "default._domainkey.example.com": [dkim(KEY_2048)],
         }),
       ).filter((k) => k.startsWith("email.") && !/mta_sts|tls_rpt/.test(k)),
     ).toEqual([]));
@@ -254,6 +266,169 @@ describe("email auth", () => {
         await run({ "example.com": ["v=spf1 -all"], "_dmarc.example.com": ["v=DMARC1; p=none"] }),
       ),
     ).toContain("email.dmarc_monitor_only"));
+  describe("DMARC details", () => {
+    const base = { "example.com": ["v=spf1 -all"] };
+    const only = async (map: Record<string, string[]>) =>
+      (
+        await run({ ...base, "default._domainkey.example.com": [dkim(KEY_2048)], ...map })
+      ).findings.filter((f) => f.checkKey.startsWith("email.dmarc"));
+
+    test("two DMARC records mean no DMARC applies, and nothing else is judged", async () => {
+      const f = await only({
+        "_dmarc.example.com": ["v=DMARC1; p=none", "v=DMARC1; p=reject; rua=mailto:a@example.com"],
+      });
+      expect(f.map((x) => x.checkKey)).toEqual(["email.dmarc_multiple"]);
+      expect(f[0]!.severity).toBe("medium");
+      expect(f[0]!.evidence).toMatchObject({ count: 2 });
+    });
+    test("a missing or unknown policy is invalid", async () => {
+      for (const record of [
+        "v=DMARC1; rua=mailto:a@example.com",
+        "v=DMARC1; p=banana; rua=mailto:a@example.com",
+      ]) {
+        const f = await only({ "_dmarc.example.com": [record] });
+        expect(f.map((x) => x.checkKey)).toEqual(["email.dmarc_invalid_policy"]);
+        expect(f[0]!.severity).toBe("medium");
+      }
+    });
+    test("p=none is monitor-only, not invalid", async () => {
+      const f = await only({
+        "_dmarc.example.com": ["v=DMARC1; p=none; rua=mailto:a@example.com"],
+      });
+      expect(f.map((x) => x.checkKey)).toEqual(["email.dmarc_monitor_only"]);
+    });
+    test("no rua=mailto: address means no reports", async () => {
+      for (const record of [
+        "v=DMARC1; p=reject",
+        "v=DMARC1; p=reject; rua=https://example.com/r",
+        "v=DMARC1; p=reject; ruf=mailto:a@example.com",
+      ]) {
+        const f = await only({ "_dmarc.example.com": [record] });
+        expect(f.map((x) => x.checkKey)).toEqual(["email.dmarc_no_reports"]);
+        expect(f[0]!.severity).toBe("low");
+      }
+      expect(
+        await only({
+          "_dmarc.example.com": [
+            "v=DMARC1; p=reject; rua=mailto:a@example.com,mailto:b@example.com",
+          ],
+        }),
+      ).toEqual([]);
+    });
+  });
+
+  describe("DKIM", () => {
+    const withDmarc: Record<string, string[]> = {
+      "example.com": ["v=spf1 -all"],
+      "_dmarc.example.com": ["v=DMARC1; p=reject; rua=mailto:a@example.com"],
+    };
+    const google = async () => [{ exchange: "aspmx.l.google.com", priority: 1 }];
+    const microsoft = async () => [
+      { exchange: "example-com.mail.protection.outlook.com", priority: 0 },
+    ];
+    const found = async (map: Record<string, string[]>, m = mx) =>
+      (await run({ ...withDmarc, ...map }, m)).findings.filter((f) =>
+        f.checkKey.startsWith("email.dkim"),
+      );
+
+    test("Google mail with no key is missing, naming the google selector", async () => {
+      const f = await found({}, google);
+      expect(f.map((x) => x.checkKey)).toEqual(["email.dkim_missing"]);
+      expect(f[0]!.severity).toBe("low");
+      expect(f[0]!.evidence).toMatchObject({ provider: "google", selectors: ["google"] });
+    });
+    test("googlemail.com MX counts as Google too", async () => {
+      const f = await found({}, async () => [
+        { exchange: "gmail-smtp-in.l.googlemail.com", priority: 5 },
+      ]);
+      expect(f[0]!.evidence).toMatchObject({ provider: "google" });
+    });
+    test("Microsoft 365 mail with no key is missing, naming both selectors", async () => {
+      const f = await found({}, microsoft);
+      expect(f.map((x) => x.checkKey)).toEqual(["email.dkim_missing"]);
+      expect(f[0]!.evidence).toMatchObject({
+        provider: "microsoft",
+        selectors: ["selector1", "selector2"],
+      });
+    });
+    test("a key at the provider's selector is clean", async () => {
+      expect(await found({ "google._domainkey.example.com": [dkim(KEY_2048)] }, google)).toEqual(
+        [],
+      );
+      expect(
+        await found({ "selector1._domainkey.example.com": [dkim(KEY_2048)] }, microsoft),
+      ).toEqual([]);
+    });
+    test("an unknown provider with no key is information only, so no health penalty", async () => {
+      const f = await found({});
+      expect(f.map((x) => x.checkKey)).toEqual(["email.dkim_not_found"]);
+      expect(f[0]!.severity).toBe("info");
+      expect(f[0]!.description).toContain("may use one Upzy can't see");
+    });
+    test("a revoked key (empty p=) is not a key", async () => {
+      const f = await found({ "default._domainkey.example.com": ["v=DKIM1; k=rsa; p="] });
+      expect(f.map((x) => x.checkKey)).toEqual(["email.dkim_not_found"]);
+      expect(f[0]!.evidence).toMatchObject({ revoked: ["default"] });
+    });
+    test("RSA key size: under 1024 is medium, 1024 is low, 2048 is fine", async () => {
+      const f = await found({
+        "s1._domainkey.example.com": [dkim(KEY_512)],
+        "s2._domainkey.example.com": [dkim(KEY_1024)],
+        "default._domainkey.example.com": [dkim(KEY_2048)],
+      });
+      const weak = f.filter((x) => x.checkKey === "email.dkim_weak_key");
+      expect(
+        weak.map((x) => [x.subject, x.severity, (x.evidence as { bits: number }).bits]),
+      ).toEqual([
+        ["s1", "medium", 512],
+        ["s2", "low", 1024],
+      ]);
+      expect(f.map((x) => x.checkKey)).not.toContain("email.dkim_not_found");
+    });
+    test("a key split over several TXT strings is joined before it is read", async () => {
+      const full = dkim(KEY_1024);
+      const cut = Math.floor(full.length / 2);
+      const r = await runChecks(domain, {
+        deps: deps({
+          resolveMx: mx,
+          resolveTxt: async (h) =>
+            h === "default._domainkey.example.com"
+              ? [[full.slice(0, cut), full.slice(cut)]]
+              : (withDmarc[h]?.map((t) => [t]) ?? []),
+        }),
+      });
+      const weak = r.findings.find((f) => f.checkKey === "email.dkim_weak_key");
+      expect((weak?.evidence as { bits: number }).bits).toBe(1024);
+    });
+    test("t=y marks a key as testing", async () => {
+      const f = await found({ "default._domainkey.example.com": [dkim(KEY_2048, "t=y; ")] });
+      expect(f.map((x) => [x.checkKey, x.subject, x.severity])).toEqual([
+        ["email.dkim_testing", "default", "low"],
+      ]);
+    });
+    test("an ed25519 key is fine and is not size-checked", async () => {
+      const raw = generateKeyPairSync("ed25519")
+        .publicKey.export({ type: "spki", format: "der" })
+        .subarray(-32)
+        .toString("base64");
+      expect(
+        await found({ "default._domainkey.example.com": [`v=DKIM1; k=ed25519; p=${raw}`] }),
+      ).toEqual([]);
+    });
+    test("a lookup that fails is not reported as a missing key", async () => {
+      const r = await runChecks(domain, {
+        deps: deps({
+          resolveMx: google,
+          resolveTxt: async (h) => {
+            if (h.endsWith("_domainkey.example.com")) throw new Error("SERVFAIL");
+            return withDmarc[h]?.map((t) => [t]) ?? [];
+          },
+        }),
+      });
+      expect(keys(r).filter((k) => k.startsWith("email.dkim"))).toEqual([]);
+    });
+  });
+
   test("not run for subdomains", async () => {
     const r = await runChecks(
       { kind: "subdomain", value: "app.example.com" },

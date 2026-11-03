@@ -8,6 +8,8 @@ import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { REPO_URL } from "@/lib/seo";
 
+import { NavShell } from "./nav-shell";
+
 const links = [
   { href: "/#features", label: "Features" },
   { href: "/#how-it-works", label: "How it works" },
@@ -20,15 +22,16 @@ const links = [
 const linkClass = buttonVariants({ variant: "ghost", size: "sm" }) + " text-muted-foreground";
 
 /**
- * A floating pill across the top of the page: logo on the left, the sections in the middle, the theme switch and the
- * sign-in actions on the right. On a narrow screen the sections move into a small menu (no JavaScript needed).
+ * A flat bar across the top of the page, with no border or shadow: logo on the left, the sections in the middle, the
+ * theme switch and the sign-in actions on the right. It is transparent until the page is scrolled (see NavShell). On a
+ * narrow screen the sections move into a small menu (no JavaScript needed).
  */
 export function Nav() {
   return (
-    <header className="fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-6">
+    <NavShell>
       <nav
         aria-label="Main"
-        className="bg-card/70 relative mx-auto flex h-14 max-w-5xl items-center justify-between gap-2 rounded-full border pr-2 pl-4 shadow-[var(--shadow-panel)] backdrop-blur-xl"
+        className="relative mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-4 sm:px-6"
       >
         <Link href="/" aria-label="Upzy home">
           <Logo />
@@ -86,6 +89,6 @@ export function Nav() {
           </details>
         </div>
       </nav>
-    </header>
+    </NavShell>
   );
 }

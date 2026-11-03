@@ -214,9 +214,53 @@ describe("fix for my stack", () => {
       "headers.no_https_redirect",
       "tls.cert_expiring",
       "email.dmarc_missing",
+      "email.dmarc_multiple",
+      "email.dmarc_invalid_policy",
+      "email.dmarc_no_reports",
+      "email.dkim_missing",
+      "email.dkim_not_found",
+      "email.dkim_weak_key",
+      "email.dkim_testing",
       "takeover.dangling_cname",
     ])
       expect(fix(key, UNKNOWN_STACK)!.caveat).toContain("Verify fix");
+  });
+
+  test("DMARC fixes give the exact record to publish", () => {
+    for (const key of ["email.dmarc_multiple", "email.dmarc_invalid_policy"])
+      expect(code(fix(key, UNKNOWN_STACK))).toContain(
+        '_dmarc.acme.com.  TXT  "v=DMARC1; p=none; rua=mailto:dmarc@acme.com"',
+      );
+    // Adding reports keeps the policy the domain already has.
+    expect(code(fix("email.dmarc_no_reports", UNKNOWN_STACK, { policy: "reject" }))).toContain(
+      "p=reject; rua=mailto:dmarc@acme.com",
+    );
+    expect(code(fix("email.dmarc_no_reports", UNKNOWN_STACK))).toContain("p=none;");
+  });
+
+  test("a missing DKIM key points at the console of the mail provider that was detected", () => {
+    const google = fix("email.dkim_missing", UNKNOWN_STACK, { provider: "google" })!;
+    expect(google.steps.join(" ")).toContain(
+      "Apps, then Google Workspace, then Gmail, then Authenticate email",
+    );
+    expect(code(google)).toContain("google._domainkey.acme.com.  TXT");
+    const microsoft = fix("email.dkim_missing", UNKNOWN_STACK, { provider: "microsoft" })!;
+    expect(microsoft.steps.join(" ")).toContain(
+      "Email & collaboration, then Policies & rules, then Threat policies, then Email authentication settings, then DKIM",
+    );
+    expect(code(microsoft)).toContain("selector2._domainkey.acme.com.  CNAME");
+    const other = fix("email.dkim_missing", UNKNOWN_STACK)!;
+    expect(other.target).toBe("Mail provider");
+    expect(other.caveat).toContain("Verify fix");
+  });
+
+  test("weak-key and testing fixes name the selector", () => {
+    expect(code(fix("email.dkim_weak_key", UNKNOWN_STACK, { selector: "s1" }))).toContain(
+      "s12._domainkey.acme.com.",
+    );
+    expect(fix("email.dkim_testing", UNKNOWN_STACK, { selector: "s1" })!.steps[0]).toContain(
+      "s1._domainkey.acme.com",
+    );
   });
 
   test("redirect, TLS and cookie fixes depend on the stack", () => {

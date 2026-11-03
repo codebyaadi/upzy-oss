@@ -569,6 +569,135 @@ export function fixFor(input: FixInput): Fix | null {
           "Your DMARC policy is p=none, which only reports. Move to p=quarantine for a quarter of the mail (pct=25), watch the reports for legitimate senders being caught, then raise pct to 100 and later switch to p=reject.",
         ],
       });
+    case "email.dmarc_multiple":
+      return dnsFix(input, {
+        label: `One merged TXT record on _dmarc.${root}`,
+        code: `_dmarc.${root}.  TXT  "v=DMARC1; p=none; rua=mailto:dmarc@${root}"`,
+        steps: [
+          "A domain may have only one DMARC record. With two or more, receivers ignore all of them, so your policy does nothing.",
+          "Keep the one with the policy and report address you want (or use the record shown, then tighten p= later), and delete every other TXT record at _dmarc that starts with v=DMARC1.",
+        ],
+      });
+    case "email.dmarc_invalid_policy":
+      return dnsFix(input, {
+        label: `Corrected TXT record on _dmarc.${root}`,
+        code: `_dmarc.${root}.  TXT  "v=DMARC1; p=none; rua=mailto:dmarc@${root}"`,
+        steps: [
+          "The p= tag is the policy and must be one of none, quarantine or reject. Yours is missing or has another value, so receivers can't use the record.",
+          "Start with p=none (report only) if you have never looked at your DMARC reports, then move to quarantine and reject once legitimate senders pass.",
+        ],
+      });
+    case "email.dmarc_no_reports": {
+      const policy = typeof input.evidence?.policy === "string" ? input.evidence.policy : "none";
+      return dnsFix(input, {
+        label: `Updated TXT record on _dmarc.${root}`,
+        code: `_dmarc.${root}.  TXT  "v=DMARC1; p=${policy}; rua=mailto:dmarc@${root}"`,
+        steps: [
+          "Add an rua=mailto: address to your existing DMARC record. Receivers then email you a daily summary of who sent mail as your domain and whether it passed.",
+          "Use an address you can read, or a DMARC report service's address. Keep the rest of your record (policy, pct, and so on) as it is.",
+        ],
+      });
+    }
+
+    case "email.dkim_missing": {
+      const provider = input.evidence?.provider;
+      const verify =
+        "Press Verify fix once the DNS record is published and signing is switched on.";
+      if (provider === "google")
+        return {
+          target: "Google Workspace",
+          detected,
+          steps: [
+            "Open the Google Admin console and go to Apps, then Google Workspace, then Gmail, then Authenticate email.",
+            `Pick ${root}, choose Generate new record (2048-bit key, selector google), and copy the TXT record it shows.`,
+            `Add that TXT record at google._domainkey.${root} in your DNS, wait a few minutes, then go back and click Start authentication.`,
+          ],
+          snippets: [
+            {
+              label: `TXT record on google._domainkey.${root}`,
+              language: "dns",
+              code: `google._domainkey.${root}.  TXT  "v=DKIM1; k=rsa; p=<the key the Admin console shows>"`,
+            },
+          ],
+          caveat: verify,
+        };
+      if (provider === "microsoft")
+        return {
+          target: "Microsoft 365",
+          detected,
+          steps: [
+            "Open the Microsoft Defender portal and go to Email & collaboration, then Policies & rules, then Threat policies, then Email authentication settings, then DKIM.",
+            `Select ${root} and turn on Sign messages for this domain with DKIM signatures. It shows two CNAME records first.`,
+            "Add both CNAME records in your DNS, wait a few minutes, then switch signing on.",
+          ],
+          snippets: [
+            {
+              label: `CNAME records for ${root}`,
+              language: "dns",
+              code: `selector1._domainkey.${root}.  CNAME  <the value Defender shows for selector1>\nselector2._domainkey.${root}.  CNAME  <the value Defender shows for selector2>`,
+            },
+          ],
+          caveat: verify,
+        };
+      return {
+        target: "Mail provider",
+        detected,
+        steps: [
+          "Find DKIM (or domain authentication) in your mail provider's settings and generate a key for your domain.",
+          "Publish the TXT or CNAME record it gives you in your DNS, then switch signing on.",
+        ],
+        snippets: [],
+        caveat: verify,
+      };
+    }
+    case "email.dkim_not_found":
+      return {
+        target: "Mail provider",
+        detected,
+        steps: [
+          "This may not be a problem. DKIM selectors can't be listed from outside, so your provider may sign with one Upzy doesn't try.",
+          "To check: send an email to a Gmail address, open it, choose Show original, and look for dkim=pass with your domain.",
+          "If it says dkim=none or fail, turn on DKIM in your mail provider's settings and publish the record it gives you.",
+        ],
+        snippets: [],
+        caveat:
+          "If your mail is already signed, you can ignore this. Otherwise press Verify fix after publishing the record.",
+      };
+    case "email.dkim_weak_key": {
+      const selector =
+        typeof input.evidence?.selector === "string" ? input.evidence.selector : "selector";
+      return {
+        target: "Mail provider",
+        detected,
+        steps: [
+          "Generate a new 2048-bit DKIM key in your mail provider (most have a Rotate or Generate new key button) and publish it under a new selector name.",
+          "Switch signing over to the new key, wait a few days so mail signed with the old one has been delivered, then delete the old record.",
+          "Keep the key at 2048 bits or more. If your DNS provider limits TXT strings to 255 characters, split the value into several quoted strings in one record.",
+        ],
+        snippets: [
+          {
+            label: "New TXT record",
+            language: "dns",
+            code: `${selector}2._domainkey.${root}.  TXT  "v=DKIM1; k=rsa; p=<2048-bit public key from your provider>"`,
+          },
+        ],
+        caveat: "Press Verify fix after the old key is removed.",
+      };
+    }
+    case "email.dkim_testing": {
+      const selector =
+        typeof input.evidence?.selector === "string" ? input.evidence.selector : "selector";
+      return {
+        target: "DNS",
+        detected,
+        steps: [
+          `The DKIM record at ${selector}._domainkey.${root} contains t=y, which tells receivers it is only a test, so they may treat your signed mail as unsigned.`,
+          "Once you've confirmed mail is being signed, edit the record and delete the t=y part (leave the rest as it is).",
+        ],
+        snippets: [],
+        caveat: "DNS changes can take a few minutes to spread. Press Verify fix afterwards.",
+      };
+    }
 
     case "takeover.dangling_cname":
     case "takeover.vulnerable_service":
