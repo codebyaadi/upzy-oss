@@ -15,7 +15,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@elysiajs/cors": "^1.4.0",
+    "@elysiajs/cors": "^1.4.3",
     "@upzy/ai": "workspace:*",
     "@upzy/auth": "workspace:*",
     "@upzy/billing": "workspace:*",
@@ -27,9 +27,9 @@
     "@upzy/security": "workspace:*",
     "@upzy/transactional": "workspace:*",
     "@upzy/validator": "workspace:*",
-    "ai": "^7.0.142",
+    "ai": "^7.0.166",
     "drizzle-orm": "^0.45.4",
-    "elysia": "^1.4.0",
+    "elysia": "^1.4.31",
     "zod": "catalog:"
   },
   "devDependencies": {
